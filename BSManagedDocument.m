@@ -21,6 +21,7 @@
 #error Need automatic reference counting to compile this.
 #endif
 
+#import <objc/message.h>
 
 #import "FoundationAdditionsMacros.h"
 #import "BSManagedDocument.h"
@@ -28,6 +29,8 @@
 
 
 @interface BSManagedDocument()
+
+@property (strong,readonly) NSManagedObjectContext* rootManagedObjectContext;
 
 @end
 
@@ -37,17 +40,32 @@
     NSManagedObjectContext* _rootManagedObjectContext;
     NSManagedObjectContext* _managedObjectContext;
     NSManagedObjectModel* _managedObjectModel;
+    
+    
 }
 
 
 /*
  Returns the URL for the wrapped Core Data store file. This appends the StoreFileName to the document's path.
  */
-+ (NSURL *)_storeURLFromURL:(NSURL *)containerURL {
++ (NSURL *)_storeURLFromURL:(NSURL *)containerURL
+{
     
     NSURL* storeURL =  [containerURL URLByAppendingPathComponent:[self persistentStoreName]];
     return storeURL;
 }
+
+
+/*
+-(void) _configureManagedObjectContext
+{
+    _rootManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+    _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+    [_managedObjectContext performBlock:^{
+        [_managedObjectContext setParentContext:_rootManagedObjectContext];
+    }];
+}
+ */
 
 
 -(void)managedObjectContextDidSave:(NSNotification *)notification
@@ -77,12 +95,13 @@
 
 -(NSManagedObjectModel *)managedObjectModel
 {
-    if (!_managedObjectModel) {
-        NSBundle* modelBundle = [NSBundle mainBundle];
-        NSArray* bundleArray = [NSArray arrayWithObject:modelBundle];
-        _managedObjectModel = [NSManagedObjectModel mergedModelFromBundles:bundleArray];
+    @synchronized(self) {
+        if (!_managedObjectModel) {
+            NSBundle* modelBundle = [NSBundle mainBundle];
+            _managedObjectModel = [NSManagedObjectModel mergedModelFromBundles:@[modelBundle]];
+        }
+        return _managedObjectModel;
     }
-    return _managedObjectModel;
 }
 
 
@@ -99,15 +118,14 @@
     NSError* pscError = nil;
     NSPersistentStore* persistentStore = [coordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType] configuration:configuration URL:url options:storeOptions error:&pscError];
     if (persistentStore) {
-        NSManagedObjectContext* parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
-        [parentContext performBlockAndWait:^{
-            [parentContext setPersistentStoreCoordinator:coordinator];
-        }];
         
         @synchronized(self) {
-            _rootManagedObjectContext = parentContext;
             _persistentStoreCoordinator = coordinator;
             _persistentStore = persistentStore;
+            NSManagedObjectContext* rootContext = self.rootManagedObjectContext;
+            [rootContext performBlock:^{
+                [rootContext setPersistentStoreCoordinator:coordinator];
+            }];
         }
         
         return YES;
@@ -140,6 +158,7 @@
 
 
 #pragma mark NSDocument
+
 
 
 + (BOOL)canConcurrentlyReadDocumentsOfType:(NSString *)typeName
@@ -178,6 +197,22 @@
         return NO;
     }
     return YES;
+}
+
+
+-(void)autosaveDocumentWithDelegate:(id)delegate didAutosaveSelector:(SEL)didAutosaveSelector contextInfo:(void *)contextInfo
+{
+    DebugLog(@"Autosaving with delegate: %@",delegate);
+    if (_managedObjectContext) {
+        NSError* mainContextError = nil;
+        if(![_managedObjectContext save:&mainContextError]) {
+            ErrorLog(@"Failed to autosave: %@",mainContextError);
+            objc_msgSend(delegate, didAutosaveSelector,self,NO,contextInfo);
+            return;
+        }
+    }
+    [super autosaveDocumentWithDelegate:delegate didAutosaveSelector:didAutosaveSelector contextInfo:contextInfo];
+    
 }
 
 
@@ -396,10 +431,26 @@
 
 -(void)setUndoManager:(NSUndoManager *)undoManager
 {
-    [self.managedObjectContext setUndoManager:undoManager];
+    // no-op, just like NSPersistentDocument
 }
 
 
+-(void)setHasUndoManager:(BOOL)hasUndoManager
+{
+    // no-op
+}
+
+
+-(BOOL)hasUndoManager
+{
+    return YES;
+}
+
+
+-(BOOL)isDocumentEdited
+{
+    return [self.managedObjectContext hasChanges];
+}
 
 #pragma mark NSObject
 
@@ -421,21 +472,34 @@
 
 #pragma mark Property Access
 
--(NSManagedObjectContext *)managedObjectContext
+
+-(NSManagedObjectContext *)rootManagedObjectContext
 {
-    if (!_managedObjectContext) {
-        @synchronized(self) {
-            if (_rootManagedObjectContext) {
-                _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
-                [_managedObjectContext setParentContext:_rootManagedObjectContext];
-                
-                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:_managedObjectContext];
-            }
+    @synchronized(self) {
+        if (!_rootManagedObjectContext) {
+            _rootManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
         }
+        return _rootManagedObjectContext;
     }
-    return _managedObjectContext;
 }
 
+
+
+-(NSManagedObjectContext *)managedObjectContext
+{
+    @synchronized(self) {
+        if (!_managedObjectContext) {
+            NSManagedObjectContext* parentContext = self.rootManagedObjectContext;
+            _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+            [_managedObjectContext performBlock:^{
+                [_managedObjectContext setParentContext:parentContext];
+                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:_managedObjectContext];
+            }];
+        }
+        return _managedObjectContext;
+    }
+
+}
 
 @end
 

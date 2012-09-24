@@ -23,7 +23,7 @@
 
 /**
  A document class that supports Core Data background operations. 
- Just like UIManagedDocument but for iOS.
+ Just like UIManagedDocument but for OS X.
  */
 @interface BSManagedDocument : NSDocument
 
@@ -42,12 +42,26 @@
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError * __autoreleasing*)error;
 
 
+/**
+ No-op, like NSPersistentDocument
+ */
+-(void)setUndoManager:(NSUndoManager *)undoManager;
+
+/**
+ No-op, like NSPersistentDocument
+ */
+-(void)setHasUndoManager:(BOOL)hasUndoManager;
+
+
+-(BOOL)isDocumentEdited;
+
+
 -(void) managedObjectContextDidSave:(NSNotification*) notification;
 
 
-@property(nonatomic, strong, readonly) NSManagedObjectModel *managedObjectModel;
+@property( strong, readonly) NSManagedObjectModel *managedObjectModel;
 
-@property(nonatomic, strong, readonly) NSManagedObjectContext *managedObjectContext;
+@property(strong, readonly) NSManagedObjectContext *managedObjectContext;
 
 
 @end
