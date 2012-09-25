@@ -56,18 +56,6 @@
 }
 
 
-/*
--(void) _configureManagedObjectContext
-{
-    _rootManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
-    _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
-    [_managedObjectContext performBlock:^{
-        [_managedObjectContext setParentContext:_rootManagedObjectContext];
-    }];
-}
- */
-
-
 -(void)managedObjectContextDidSave:(NSNotification *)notification
 {
     id sender = notification.object;
@@ -158,7 +146,6 @@
 
 
 #pragma mark NSDocument
-
 
 
 + (BOOL)canConcurrentlyReadDocumentsOfType:(NSString *)typeName
@@ -484,7 +471,6 @@
 }
 
 
-
 -(NSManagedObjectContext *)managedObjectContext
 {
     @synchronized(self) {
@@ -498,7 +484,6 @@
         }
         return _managedObjectContext;
     }
-
 }
 
 @end

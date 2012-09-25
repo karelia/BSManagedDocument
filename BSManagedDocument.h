@@ -59,9 +59,9 @@
 -(void) managedObjectContextDidSave:(NSNotification*) notification;
 
 
-@property( strong, readonly) NSManagedObjectModel *managedObjectModel;
+@property(strong,readonly) NSManagedObjectModel *managedObjectModel;
 
-@property(strong, readonly) NSManagedObjectContext *managedObjectContext;
+@property(strong,readonly) NSManagedObjectContext *managedObjectContext;
 
 
 @end
