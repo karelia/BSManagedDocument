@@ -23,6 +23,8 @@
 //
 //  *   On 10.7+, asynchronous saving is supported. We set up a parent/child pair of contexts; the parent saves on its own thread
 //
+//  *   Full support for concurrent document opening too
+//
 //  *   Subclasses can hook in to manage additional content inside the package
 //
 //  *   A hook is also provided at the best time to set metadata for the store
@@ -92,7 +94,7 @@
 
 /* Called just before the context is saved, giving you a chance to adjust the store's metadata. Default implementation leaves the existing metadata untouched and returns YES. You should only override to return NO if storing the metadata went wrong in a critical way that stops the doc from being saved. Called on an arbitrary thread, so up to you to bounce over to the correct one if needed.
  */
-- (BOOL)setMetadataOfPersistentStore:(NSPersistentStore *)store error:(NSError **)error;
+- (BOOL)updateMetadataForPersistentStore:(NSPersistentStore *)store error:(NSError **)error;
 
 /* BSManagedDocument supports asynchronous saving on 10.7+ (on earlier releases this method returns NO).
  */
