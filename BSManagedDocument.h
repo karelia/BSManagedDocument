@@ -31,6 +31,8 @@
 //
 //  *   New docs have the bundle bit set on them. It means that if the doc gets transferred to a Mac without your app installed, with the bundle bit still intact, it will still appear in the Finder as a file package rather than a folder
 //
+//  *   If the document moves on disk, Core Data is kept informed of the new location
+//
 //  *   If multiple validation errors occur during saving, the presented error is adjusted to make debugging a little easier
 //
 //  *   And of course, full support for Autosave-In-Place and Versions
