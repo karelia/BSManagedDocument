@@ -135,7 +135,7 @@
         
         [PSC release];  // context hangs onto it for us
         
-        [self setUndoManager:[_managedObjectContext undoManager]];
+        [super setUndoManager:[_managedObjectContext undoManager]];
     }
     return self;
 }
