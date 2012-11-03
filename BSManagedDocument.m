@@ -61,7 +61,7 @@
         
         [PSC release];  // context hangs onto it for us
         
-        [super setUndoManager:[_managedObjectContext undoManager]];
+        [super setUndoManager:[_managedObjectContext undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
     }
     
     return _managedObjectContext;
@@ -572,6 +572,8 @@ originalContentsURL:(NSURL *)originalContentsURL
 // No-ops, like NSPersistentDocument
 - (void)setUndoManager:(NSUndoManager *)undoManager { }
 - (void)setHasUndoManager:(BOOL)hasUndoManager { }
+
+// Could also implement -hasUndoManager. The NSPersistentDocument docs just say "Returns YES", which you could construe to mean it's overriden there. But I think what it actually means is that the default value for documents is YES, and we've overridden -setHasUndoManager: to be a no-op, so there's no reasonable way for it to return NO
 
 #pragma mark Error Presentation
 
