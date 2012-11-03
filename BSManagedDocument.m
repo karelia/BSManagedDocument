@@ -35,36 +35,54 @@
 {
     if (!_managedObjectContext)
     {
-        NSPersistentStoreCoordinator *PSC = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
-		
-        // Need 10.7+ to support parent context
-        if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)] &&
-            [NSManagedObjectContext instancesRespondToSelector:@selector(setParentContext:)])
+        // Need 10.7+ to support concurrency types
+        NSManagedObjectContext *context;
+        if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)])
         {
-            NSManagedObjectContext *parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
-            
-            [parentContext performBlockAndWait:^{
-                [parentContext setUndoManager:nil]; // no point in it supporting undo
-                [parentContext setPersistentStoreCoordinator:PSC];
-            }];
-            
-            _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
-            [_managedObjectContext setParentContext:parentContext];
-            
-            [parentContext release];
+            context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
         }
         else
         {
-            _managedObjectContext = [[NSManagedObjectContext alloc] init];
-            [_managedObjectContext setPersistentStoreCoordinator:PSC];
-		}
+            context = [[NSManagedObjectContext alloc] init];
+        }
         
-        [PSC release];  // context hangs onto it for us
-        
-        [super setUndoManager:[_managedObjectContext undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
+        [self setManagedObjectContext:context];
+        [context release];
     }
     
     return _managedObjectContext;
+}
+
+- (void)setManagedObjectContext:(NSManagedObjectContext *)context;
+{
+    // Setup the rest of the stack for the context
+    
+    NSPersistentStoreCoordinator *PSC = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
+    
+    // Need 10.7+ to support parent context
+    if ([context respondsToSelector:@selector(setParentContext:)])
+    {
+        NSManagedObjectContext *parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+        
+        [parentContext performBlockAndWait:^{
+            [parentContext setUndoManager:nil]; // no point in it supporting undo
+            [parentContext setPersistentStoreCoordinator:PSC];
+        }];
+        
+        [context setParentContext:parentContext];
+        _managedObjectContext = [context retain];
+        
+        [parentContext release];
+    }
+    else
+    {
+        [context setPersistentStoreCoordinator:PSC];
+        _managedObjectContext = [context retain];
+    }
+    
+    [PSC release];  // context hangs onto it for us
+    
+    [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
 }
 
 - (NSManagedObjectModel *)managedObjectModel;
