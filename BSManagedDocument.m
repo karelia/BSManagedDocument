@@ -27,17 +27,6 @@
 
 @implementation BSManagedDocument
 
-/*
- Returns the URL for the wrapped Core Data store file. This appends the StoreFileName to the document's path.
- */
-+ (NSURL *)_storeURLFromURL:(NSURL *)containerURL
-{
-    
-    NSURL* storeURL =  [containerURL URLByAppendingPathComponent:[self persistentStoreName]];
-    return storeURL;
-}
-
-
 #pragma mark UIManagedDocument-inspired methods
 
 + (NSString *)persistentStoreName; { return @"persistentStore"; }
