@@ -31,7 +31,41 @@
 
 + (NSString *)persistentStoreName; { return @"persistentStore"; }
 
-@synthesize managedObjectContext = _managedObjectContext;
+- (NSManagedObjectContext *)managedObjectContext;
+{
+    if (!_managedObjectContext)
+    {
+        NSPersistentStoreCoordinator *PSC = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
+		
+        // Need 10.7+ to support parent context
+        if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)] &&
+            [NSManagedObjectContext instancesRespondToSelector:@selector(setParentContext:)])
+        {
+            NSManagedObjectContext *parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+            
+            [parentContext performBlockAndWait:^{
+                [parentContext setUndoManager:nil]; // no point in it supporting undo
+                [parentContext setPersistentStoreCoordinator:PSC];
+            }];
+            
+            _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+            [_managedObjectContext setParentContext:parentContext];
+            
+            [parentContext release];
+        }
+        else
+        {
+            _managedObjectContext = [[NSManagedObjectContext alloc] init];
+            [_managedObjectContext setPersistentStoreCoordinator:PSC];
+		}
+        
+        [PSC release];  // context hangs onto it for us
+        
+        [super setUndoManager:[_managedObjectContext undoManager]];
+    }
+    
+    return _managedObjectContext;
+}
 
 - (NSManagedObjectModel *)managedObjectModel;
 {
@@ -92,42 +126,6 @@
 }
 
 #pragma mark Lifecycle
-
-- (id)init
-{
-    self = [super init];
-    if (self)
-    {
-		NSPersistentStoreCoordinator *PSC = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
-		
-        // Need 10.7+ to support parent context
-        if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)] &&
-            [NSManagedObjectContext instancesRespondToSelector:@selector(setParentContext:)])
-        {
-            NSManagedObjectContext *parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
-            
-            [parentContext performBlockAndWait:^{
-                [parentContext setUndoManager:nil]; // no point in it supporting undo
-                [parentContext setPersistentStoreCoordinator:PSC];
-            }];
-            
-            _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
-            [_managedObjectContext setParentContext:parentContext];
-            
-            [parentContext release];
-        }
-        else
-        {
-            _managedObjectContext = [[NSManagedObjectContext alloc] init];
-            [_managedObjectContext setPersistentStoreCoordinator:PSC];
-		}
-        
-        [PSC release];  // context hangs onto it for us
-        
-        [super setUndoManager:[_managedObjectContext undoManager]];
-    }
-    return self;
-}
 
 - (void)dealloc;
 {
