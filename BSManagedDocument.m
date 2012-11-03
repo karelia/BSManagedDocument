@@ -36,14 +36,24 @@
     if (!_managedObjectContext)
     {
         // Need 10.7+ to support concurrency types
-        NSManagedObjectContext *context;
+        __block NSManagedObjectContext *context;
         if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)])
         {
             context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
         }
         else
         {
-            context = [[NSManagedObjectContext alloc] init];
+            // On 10.6, context MUST be created on the thread/queue that's going to use it
+            if ([NSThread isMainThread])
+            {
+                context = [[NSManagedObjectContext alloc] init];
+            }
+            else
+            {
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    context = [[NSManagedObjectContext alloc] init];
+                });
+            }
         }
         
         [self setManagedObjectContext:context];
