@@ -138,6 +138,7 @@
 
 - (id)additionalContentForURL:(NSURL *)absoluteURL ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
 {
+	// Need to hand back something so as not to indicate there was an error
     return [NSNull null];
 }
 
