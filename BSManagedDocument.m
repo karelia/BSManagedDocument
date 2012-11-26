@@ -295,6 +295,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     // Can't write on worker thread if caller somehow bypassed additional content & saving main context
     if (!_additionalContent)
     {
+		// For example, duplicating a document calls -writeSafely… directly. Also, using the old synchronous saving APIs bring you to this point
         if ([NSThread isMainThread])
         {
             _additionalContent = [[self additionalContentForURL:inURL ofType:typeName forSaveOperation:saveOp error:error] retain];
