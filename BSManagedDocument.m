@@ -654,7 +654,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 		{
 			// If there are multiple validation errors, inError will be a NSValidationMultipleErrorsError
 			// and all the validation errors will be in an array in the userInfo dictionary for key NSDetailedErrorsKey
-			id detailedErrors = [[inError userInfo] objectForKey:NSDetailedErrorsKey];
+			NSArray *detailedErrors = [[inError userInfo] objectForKey:NSDetailedErrorsKey];
 			if ( detailedErrors != nil )
 			{
 				NSUInteger numErrors = [detailedErrors count];
