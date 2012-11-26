@@ -252,6 +252,10 @@
 {
 	if ([typeName isEqualToString:[self fileType]]) // custom doc types probably want standard saving
     {
+		// At this point, we've either captured all document content, or are writing on the main thread, so it's fine to unblock the UI
+		if ([self respondsToSelector:@selector(unblockUserInteraction)]) [self unblockUserInteraction];
+		
+		
         if (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation ||
             (saveOperation == NSAutosaveElsewhereOperation && [absoluteURL isEqual:[self autosavedContentsFileURL]]))
         {

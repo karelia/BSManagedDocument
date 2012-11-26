@@ -93,6 +93,7 @@
 
 /* An optional call out by writeToURL:ofType:forSaveOperation:originalContentsURL:error: to handle non-Core Data content in the document's package. The Core Data content is handled by the primary NSDocument -writeToURL:ofType:forSaveOperation:originalContentsURL:error: method.  It is not necessary to call super.
  * This method is called after context(s) have been saved to disk, so the document is already partially written. You should avoid returning NO as that reports an error to the user, but leaves the document in a partially updated state.
+ * You should NEVER attempt to access the main context's objects or other document state from this methods, as user interaction may have been unblocked, causing the state to be out of sync with that being written. Instead, override -additionalContentForURL:… to capture such information
  */
 - (BOOL)writeAdditionalContent:(id)content toURL:(NSURL *)absoluteURL forSaveOperation:(NSSaveOperationType)saveOperation originalContentsURL:(NSURL *)absoluteOriginalContentsURL error:(NSError **)error;
 
