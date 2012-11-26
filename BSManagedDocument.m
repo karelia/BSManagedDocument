@@ -265,7 +265,17 @@
 				NSURL *backupURL = [self backupFileURL];
 				if (backupURL)
 				{
-					if (![self writeBackupToURL:backupURL error:outError]) return NO;
+					if (![self writeBackupToURL:backupURL error:outError])
+					{
+						// If backup fails, seems it's our responsibility to clean up
+						NSError *error;
+						if (![[NSFileManager defaultManager] removeItemAtURL:backupURL error:&error])
+						{
+							NSLog(@"Unable to cleanup after failed backup: %@", error);
+						}
+						
+						return NO;
+					}
 				}
 			}
 			
