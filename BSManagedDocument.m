@@ -647,7 +647,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     // customizations for NSCocoaErrorDomain
 	if ( [[inError domain] isEqualToString:NSCocoaErrorDomain] )
 	{
-		int errorCode = [inError code];
+		NSInteger errorCode = [inError code];
 		
 		// is this a Core Data validation error?
 		if ( (errorCode >= NSValidationErrorMinimum) && (errorCode <= NSValidationErrorMaximum) )
@@ -657,7 +657,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 			id detailedErrors = [[inError userInfo] objectForKey:NSDetailedErrorsKey];
 			if ( detailedErrors != nil )
 			{
-				unsigned numErrors = [detailedErrors count];
+				NSUInteger numErrors = [detailedErrors count];
 				NSMutableString *errorString = [NSMutableString stringWithFormat:@"%lu validation errors have occurred.", (unsigned long)numErrors];
 				NSMutableString *secondary = [NSMutableString string];
 				if ( numErrors > 3 )
@@ -665,7 +665,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 					[secondary appendString:NSLocalizedString(@"The first 3 are:\n", @"To be followed by 3 error messages")];
 				}
 				
-				unsigned i;
+				NSUInteger i;
 				for ( i = 0; i < ((numErrors > 3) ? 3 : numErrors); i++ )
 				{
 					[secondary appendFormat:@"%@\n", [[detailedErrors objectAtIndex:i] localizedDescription]];
