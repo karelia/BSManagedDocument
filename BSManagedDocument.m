@@ -255,6 +255,21 @@
         if (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation ||
             (saveOperation == NSAutosaveElsewhereOperation && [absoluteURL isEqual:[self autosavedContentsFileURL]]))
         {
+			// As of 10.8, need to make a backup of the document when saving in-place
+			// Unfortunately, it turns out 10.7 includes -backupFileURL, just that it's private. Checking AppKit number seems to be our best bet, and I have to hardcode that since 10_8 is not defined in the SDK yet. (1187 was found simply by looking at the GM)
+			if (NSAppKitVersionNumber >= 1187 &&
+				[self respondsToSelector:@selector(backupFileURL)] &&
+				(saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation) &&
+				[[self class] preservesVersions])			// otherwise backupURL has a different meaning
+			{
+				NSURL *backupURL = [self backupFileURL];
+				if (backupURL)
+				{
+					if (![self writeBackupToURL:backupURL error:outError]) return NO;
+				}
+			}
+			
+			
             // NSDocument attempts to write a copy of the document out at a temporary location.
             // Core Data cannot support this, so we override it to save directly.
             BOOL result = [self writeToURL:absoluteURL
@@ -284,6 +299,11 @@
                             ofType:typeName
                   forSaveOperation:saveOperation
                              error:outError];
+}
+
+- (BOOL)writeBackupToURL:(NSURL *)backupURL error:(NSError **)outError;
+{
+	return [[NSFileManager defaultManager] copyItemAtURL:[self fileURL] toURL:backupURL error:outError];
 }
 
 - (BOOL)writeToURL:(NSURL *)inURL

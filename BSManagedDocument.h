@@ -100,6 +100,10 @@
  */
 - (BOOL)updateMetadataForPersistentStore:(NSPersistentStore *)store error:(NSError **)error;
 
+/* Called on 10.8+ when the OS decides it wants to store a version of the existing doc *before* writing out the updated version. Default implementation simply makes a copy of the doc. You might override to speed it up by hard linking some files instead
+ */
+- (BOOL)writeBackupToURL:(NSURL *)backupURL error:(NSError **)outError;
+
 /* BSManagedDocument supports asynchronous saving on 10.7+ (on earlier releases this method returns NO).
  */
 - (BOOL)canAsynchronouslyWriteToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation;
