@@ -181,7 +181,10 @@
     // If have already read, then this is a revert-type affair, so must reload data from disk
     if (_store)
     {
-        OBASSERTSTRING([NSThread isMainThread], @"I didn't anticipate reverting on a background thread!");
+        if (!([NSThread isMainThread])) {
+            NSException *exception = [NSException exceptionWithName:@"ThreadingProblem" reason:[NSString stringWithFormat:@"%@: I didn't anticipate reverting on a background thread!", NSStringFromSelector(_cmd)] userInfo:nil];
+            @throw exception;
+        }
         
         // NSPersistentDocument states: "Revert resets the document’s managed object context. Objects are subsequently loaded from the persistent store on demand, as with opening a new document."
         // I've found for atomic stores that -reset only rolls back to the last loaded or saved version of the store; NOT what's actually on disk
