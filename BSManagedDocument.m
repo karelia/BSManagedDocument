@@ -241,10 +241,6 @@
     NSError *error;
     _additionalContent = [self additionalContentForURL:url ofType:typeName forSaveOperation:saveOperation error:&error];
 
-#if !__has_feature(objc_arc)
-    [_additionalContent retain];
-#endif
-
     if (!_additionalContent)
     {
         NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
@@ -252,6 +248,10 @@
         return;
     }
     
+#if !__has_feature(objc_arc)
+    [_additionalContent retain];
+#endif
+
     // Save the main context on the main thread before handing off to the background
     if ([[self managedObjectContext] save:&error])
     {
