@@ -251,28 +251,27 @@
 #if !__has_feature(objc_arc)
     [_additionalContent retain];
 #endif
-
-    // Save the main context on the main thread before handing off to the background
-    if ([[self managedObjectContext] save:&error])
-    {
-        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
-            
-#if !__has_feature(objc_arc)
-            [_additionalContent release];
-#endif
-
-            _additionalContent = nil;
-            completionHandler(error);
-        }];
-    }
-    else
-    {
+    
+    
+    // Completion handler *has* to run at some point, so extend it to do cleanup for us
+    completionHandler = ^(NSError *error) {
+        
 #if !__has_feature(objc_arc)
         [_additionalContent release];
 #endif
-
         _additionalContent = nil;
         
+        completionHandler(error);
+    };
+    
+    
+    // Save the main context on the main thread before handing off to the background
+    if ([[self managedObjectContext] save:&error])
+    {
+        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:completionHandler];
+    }
+    else
+    {
         NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
         completionHandler(error);
     }
