@@ -95,7 +95,7 @@
     _managedObjectContext = context;
 
 #if !__has_feature(objc_arc)
-    [coordinator release];
+    [coordinator release];  // context hangs onto it for us
 #endif
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
