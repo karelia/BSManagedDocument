@@ -69,7 +69,7 @@
     [context retain];
 #endif
     
-    NSPersistentStoreCoordinator *PSC = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
+    NSPersistentStoreCoordinator *coordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
     // Need 10.7+ to support parent context
     if ([context respondsToSelector:@selector(setParentContext:)])
@@ -78,7 +78,7 @@
         
         [parentContext performBlockAndWait:^{
             [parentContext setUndoManager:nil]; // no point in it supporting undo
-            [parentContext setPersistentStoreCoordinator:PSC];
+            [parentContext setPersistentStoreCoordinator:coordinator];
         }];
         
         [context setParentContext:parentContext];
@@ -89,13 +89,13 @@
     }
     else
     {
-        [context setPersistentStoreCoordinator:PSC];
+        [context setPersistentStoreCoordinator:coordinator];
     }
 
     _managedObjectContext = context;
 
 #if !__has_feature(objc_arc)
-    [PSC release];
+    [coordinator release];
 #endif
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
