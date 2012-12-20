@@ -426,7 +426,7 @@ originalContentsURL:(NSURL *)originalContentsURL
         // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed
         if (result)
         {
-#if (defined MAC_OS_X_VERSION_10_8) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_8
+#if (defined MAC_OS_X_VERSION_10_8) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_8   // have to check as NSURLIsPackageKey only became writable in 10.8
             NSError *error;
             if (![inURL setResourceValue:@YES forKey:NSURLIsPackageKey error:&error])
             {
