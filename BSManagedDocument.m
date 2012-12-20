@@ -578,13 +578,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     //NSNumber *writable;
     //result = [URL getResourceValue:&writable forKey:NSURLIsWritableKey error:&error];
     
-    NSFileManager *fileManager = [[NSFileManager alloc] init];
-    BOOL result = [fileManager isWritableFileAtPath:[storeURL path]];
-
-#if ! __has_feature(objc_arc)
-    [fileManager release];
-#endif
-
+    BOOL result = [[NSFileManager defaultManager] isWritableFileAtPath:[storeURL path]];
     if (result)
     {
         result = [context save:error];
