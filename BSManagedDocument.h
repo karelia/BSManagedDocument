@@ -59,12 +59,22 @@
 /* Persistent documents always have a managed object context and a persistent store coordinator through that context.
  * A default context is created on-demand. You can override to use your own instead
  * -setManagedObjectContext: automatically sets a persistence stack for the context and uses its undo manager
+ * There are two versions to account for being able to use this with or without ARC.
  */
-@property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
+#if ! __has_feature(objc_arc)
+    @property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
+#else
+    @property (nonatomic, strong) NSManagedObjectContext *managedObjectContext;
+#endif
 
 /* Persistent documents always have a managed object model.  The default model is the union of all models in the main bundle.
+ * There are two versions to account for being able to use this with or without ARC.
  */
-@property (nonatomic, retain, readonly) NSManagedObjectModel* managedObjectModel;
+#if ! __has_feature(objc_arc)
+    @property (nonatomic, retain, readonly) NSManagedObjectModel* managedObjectModel;
+#else
+    @property (nonatomic, strong, readonly) NSManagedObjectModel* managedObjectModel;
+#endif
 
 /* Customize the loading or creation of a persistent store to the coordinator.
  */

@@ -18,10 +18,6 @@
 //  THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#if __has_feature(objc_arc)
-#error Automatic reference counting is not supported
-#endif
-
 #import "BSManagedDocument.h"
 
 
@@ -57,7 +53,9 @@
         }
         
         [self setManagedObjectContext:context];
-        [context release];
+        #if ! __has_feature(objc_arc)
+            [context release];
+        #endif
     }
     
     return _managedObjectContext;
@@ -66,6 +64,10 @@
 - (void)setManagedObjectContext:(NSManagedObjectContext *)context;
 {
     // Setup the rest of the stack for the context
+
+    #if !__has_feature(objc_arc)
+        [context retain];
+    #endif
     
     NSPersistentStoreCoordinator *PSC = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
@@ -80,17 +82,21 @@
         }];
         
         [context setParentContext:parentContext];
-        _managedObjectContext = [context retain];
-        
-        [parentContext release];
+
+        #if !__has_feature(objc_arc)
+            [parentContext release];
+        #endif
     }
     else
     {
         [context setPersistentStoreCoordinator:PSC];
-        _managedObjectContext = [context retain];
     }
-    
-    [PSC release];  // context hangs onto it for us
+
+    _managedObjectContext = context;
+
+    #if !__has_feature(objc_arc)
+        [PSC release];
+    #endif
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
 }
@@ -100,9 +106,12 @@
     if (!_managedObjectModel)
     {
         _managedObjectModel = [NSManagedObjectModel mergedModelFromBundles:[NSArray arrayWithObject:[NSBundle mainBundle]]];
-        [_managedObjectModel retain];
+
+        #if ! __has_feature(objc_arc)
+            [_managedObjectModel retain];
+        #endif
     }
-    
+
     return _managedObjectModel;
 }
 
@@ -129,7 +138,9 @@
                                                       URL:storeURL
                                                   options:storeOptions
                                                     error:error];
-    [_store retain];
+    #if ! __has_feature(objc_arc)
+        [_store retain];
+    #endif
     
 	return (_store != nil);
 }
@@ -156,6 +167,8 @@
 
 #pragma mark Lifecycle
 
+// It's simpler to wrap the whole method in a conditional test rather than using a macro for each line.
+#if ! __has_feature(objc_arc)
 - (void)dealloc;
 {
     [_managedObjectContext release];
@@ -164,6 +177,7 @@
     
     [super dealloc];
 }
+#endif
 
 #pragma mark Reading From and Writing to URLs
 
@@ -193,8 +207,12 @@
         {
             return NO;
         }
-        
-        [_store release]; _store = nil;
+
+        #if !__has_feature(objc_arc)
+            [_store release];
+        #endif
+
+        _store = nil;
     }
     
     
@@ -220,8 +238,12 @@
      */
     
     NSError *error;
-    _additionalContent = [[self additionalContentForURL:url ofType:typeName forSaveOperation:saveOperation error:&error] retain];
-    
+    _additionalContent = [self additionalContentForURL:url ofType:typeName forSaveOperation:saveOperation error:&error];
+
+    #if !__has_feature(objc_arc)
+        [_additionalContent retain];
+    #endif
+
     if (!_additionalContent)
     {
         NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
@@ -233,13 +255,21 @@
     {
         [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
             
-            [_additionalContent release]; _additionalContent = nil;
+            #if !__has_feature(objc_arc)
+                [_additionalContent release];
+            #endif
+
+            _additionalContent = nil;
             completionHandler(error);
         }];
     }
     else
     {
-        [_additionalContent release]; _additionalContent = nil;
+        #if !__has_feature(objc_arc)
+            [_additionalContent release];
+        #endif
+
+        _additionalContent = nil;
         
         NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
         completionHandler(error);
@@ -335,7 +365,12 @@ originalContentsURL:(NSURL *)originalContentsURL
 		// For example, duplicating a document calls -writeSafely… directly. Also, using the old synchronous saving APIs bring you to this point
         if ([NSThread isMainThread])
         {
-            _additionalContent = [[self additionalContentForURL:inURL ofType:typeName forSaveOperation:saveOp error:error] retain];
+            _additionalContent = [self additionalContentForURL:inURL ofType:typeName forSaveOperation:saveOp error:error];
+
+            #if !__has_feature(objc_arc)
+                [_additionalContent retain];
+            #endif
+            
             if (!_additionalContent) return NO;
             
             // On 10.7+, save the main context, ready for parent to be saved in a moment
@@ -344,14 +379,22 @@ originalContentsURL:(NSURL *)originalContentsURL
             {
                 if (![context save:error])
                 {
-                    [_additionalContent release]; _additionalContent = nil;
+                    #if !__has_feature(objc_arc)
+                        [_additionalContent release];
+                    #endif
+
+                    _additionalContent = nil;
                     return NO;
                 }
             }
             
             // And now we're ready to write for real
             BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
-            [_additionalContent release]; _additionalContent = nil;
+            #if !__has_feature(objc_arc)
+                [_additionalContent release];
+            #endif
+
+            _additionalContent = nil;
             return result;
         }
         else
@@ -448,7 +491,13 @@ originalContentsURL:(NSURL *)originalContentsURL
                                                                         error:error];
             
             if (!migrated) return NO;
-            [_store release]; _store = [migrated retain];
+            
+            #if ! __has_feature(objc_arc)
+                [migrated retain];
+                [_store release];
+            #endif
+
+            _store = migrated;
             
             return [self writeAdditionalContent:_additionalContent
                                           toURL:inURL
@@ -492,11 +541,18 @@ originalContentsURL:(NSURL *)originalContentsURL
         
         [parent performBlockAndWait:^{
             result = [self preflightURL:storeURL thenSaveContext:parent error:error];
+
+            #if ! __has_feature(objc_arc)
+                // Errors need special handling to guarantee surviving crossing the block
+                if (!result && error) [*error retain];
+            #endif
             
-            // Errors need special handling to guarantee surviving crossing the block
-            if (!result && error) [*error retain];
         }];
-        if (!result && error) [*error autorelease]; // tidy up since any error was retained on worker thread
+        
+        #if ! __has_feature(objc_arc)
+            if (!result && error) [*error autorelease]; // tidy up since any error was retained on worker thread
+        #endif
+    
     }
     else
     {
@@ -531,8 +587,11 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     NSFileManager *fileManager = [[NSFileManager alloc] init];
     BOOL result = [fileManager isWritableFileAtPath:[storeURL path]];
-    [fileManager release];
-    
+
+    #if ! __has_feature(objc_arc)
+        [fileManager release];
+    #endif
+
     if (result)
     {
         result = [context save:error];
@@ -629,8 +688,11 @@ originalContentsURL:(NSURL *)originalContentsURL
         [self removeWindowController:aController];
         [aController close];
     }
-    [controllers release];
-    
+    #if ! __has_feature(objc_arc)
+        [controllers release];
+    #endif
+
+
     @try
     {
         return [super revertToContentsOfURL:absoluteURL ofType:typeName error:outError];
