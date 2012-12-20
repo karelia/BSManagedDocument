@@ -182,8 +182,7 @@
     if (_store)
     {
         if (!([NSThread isMainThread])) {
-            NSException *exception = [NSException exceptionWithName:@"ThreadingProblem" reason:[NSString stringWithFormat:@"%@: I didn't anticipate reverting on a background thread!", NSStringFromSelector(_cmd)] userInfo:nil];
-            @throw exception;
+            [NSException raise:NSInternalInconsistencyException format:@"%@: I didn't anticipate reverting on a background thread!", NSStringFromSelector(_cmd)];
         }
         
         // NSPersistentDocument states: "Revert resets the document’s managed object context. Objects are subsequently loaded from the persistent store on demand, as with opening a new document."
