@@ -20,13 +20,6 @@
 
 #import "BSManagedDocument.h"
 
-// Need to define this as a no-op for non-ARC environments
-#if ! __has_feature(objc_arc)
-    #ifndef __bridge
-        #define __bridge
-    #endif
-#endif
-
 
 @implementation BSManagedDocument
 
@@ -426,12 +419,33 @@ originalContentsURL:(NSURL *)originalContentsURL
         // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed
         if (result)
         {
-            CFErrorRef cfError;
-            if (!(CFURLSetResourcePropertyForKey((__bridge CFURLRef)inURL, kCFURLIsPackageKey, kCFBooleanTrue, &cfError))) {
-                CFStringRef errorDescription = CFErrorCopyDescription(cfError);
-                NSLog(@"Error marking document as a package: %@", (__bridge NSString *)errorDescription);
-                CFRelease(errorDescription);
+#if (defined MAC_OS_X_VERSION_10_8) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_8   // have to check as NSURLIsPackageKey only became writable in 10.8
+            NSError *error;
+            if (![inURL setResourceValue:@YES forKey:NSURLIsPackageKey error:&error])
+            {
+                NSLog(@"Error marking document as a package: %@", error);
             }
+#else
+            FSRef fileRef;
+            if (CFURLGetFSRef((CFURLRef)inURL, &fileRef))
+            {
+                // Get the file's current info
+                FSCatalogInfo fileInfo;
+                OSErr error = FSGetCatalogInfo(&fileRef, kFSCatInfoFinderInfo, &fileInfo, NULL, NULL, NULL);
+                
+                if (!error)
+                {
+                    // Adjust the bundle bit
+                    FolderInfo *finderInfo = (FolderInfo *)fileInfo.finderInfo;
+                    finderInfo->finderFlags |= kHasBundle;
+                    
+                    // Set the altered flags of the file
+                    error = FSSetCatalogInfo(&fileRef, kFSCatInfoFinderInfo, &fileInfo);
+                }
+                
+                if (error) NSLog(@"OSError %i setting bundle bit for %@", error, [inURL path]);
+            }
+#endif
         }
     }
     
