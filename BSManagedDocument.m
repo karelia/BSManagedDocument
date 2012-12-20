@@ -223,6 +223,7 @@
     {
         NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
         completionHandler(error);
+        return;
     }
     
     // Save the main context on the main thread before handing off to the background
