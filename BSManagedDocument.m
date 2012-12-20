@@ -369,9 +369,7 @@ originalContentsURL:(NSURL *)originalContentsURL
             _additionalContent = [self additionalContentForURL:inURL ofType:typeName forSaveOperation:saveOp error:error];
             if (!_additionalContent) return NO;
             
-#if !__has_feature(objc_arc)
-            [_additionalContent retain];
-#endif
+            // Worried that _additionalContent hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
             
             // On 10.7+, save the main context, ready for parent to be saved in a moment
             NSManagedObjectContext *context = [self managedObjectContext];
@@ -379,10 +377,6 @@ originalContentsURL:(NSURL *)originalContentsURL
             {
                 if (![context save:error])
                 {
-#if !__has_feature(objc_arc)
-                    [_additionalContent release];
-#endif
-
                     _additionalContent = nil;
                     return NO;
                 }
@@ -390,10 +384,9 @@ originalContentsURL:(NSURL *)originalContentsURL
             
             // And now we're ready to write for real
             BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
-#if !__has_feature(objc_arc)
-            [_additionalContent release];
-#endif
-
+            
+            
+            // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
             _additionalContent = nil;
             return result;
         }
