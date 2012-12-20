@@ -261,7 +261,7 @@
     
     
     // Completion handler *has* to run at some point, so extend it to do cleanup for us
-    completionHandler = ^(NSError *error) {
+    void (^extendedCompletionHandler)(NSError *) = ^(NSError *error) {
         
 #if !__has_feature(objc_arc)
         [_additionalContent release];
@@ -275,12 +275,12 @@
     // Save the main context on the main thread before handing off to the background
     if ([[self managedObjectContext] save:&error])
     {
-        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:completionHandler];
+        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:extendedCompletionHandler];
     }
     else
     {
         NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
-        completionHandler(error);
+        extendedCompletionHandler(error);
     }
 }
 
