@@ -65,10 +65,6 @@
 {
     // Setup the rest of the stack for the context
 
-#if !__has_feature(objc_arc)
-    [context retain];
-#endif
-    
     NSPersistentStoreCoordinator *coordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
     // Need 10.7+ to support parent context
@@ -92,7 +88,13 @@
         [context setPersistentStoreCoordinator:coordinator];
     }
 
+#if __has_feature(objc_arc)
     _managedObjectContext = context;
+#else
+    [context retain];
+    [_managedObjectContext release]; _managedObjectContext = context;
+#endif
+    
 
 #if !__has_feature(objc_arc)
     [coordinator release];  // context hangs onto it for us
