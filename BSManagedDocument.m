@@ -367,12 +367,11 @@ originalContentsURL:(NSURL *)originalContentsURL
         if ([NSThread isMainThread])
         {
             _additionalContent = [self additionalContentForURL:inURL ofType:typeName forSaveOperation:saveOp error:error];
-
+            if (!_additionalContent) return NO;
+            
 #if !__has_feature(objc_arc)
             [_additionalContent retain];
 #endif
-            
-            if (!_additionalContent) return NO;
             
             // On 10.7+, save the main context, ready for parent to be saved in a moment
             NSManagedObjectContext *context = [self managedObjectContext];
