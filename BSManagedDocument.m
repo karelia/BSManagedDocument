@@ -53,9 +53,9 @@
         }
         
         [self setManagedObjectContext:context];
-        #if ! __has_feature(objc_arc)
-            [context release];
-        #endif
+#if ! __has_feature(objc_arc)
+        [context release];
+#endif
     }
     
     return _managedObjectContext;
@@ -65,9 +65,9 @@
 {
     // Setup the rest of the stack for the context
 
-    #if !__has_feature(objc_arc)
-        [context retain];
-    #endif
+#if !__has_feature(objc_arc)
+    [context retain];
+#endif
     
     NSPersistentStoreCoordinator *PSC = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
@@ -83,9 +83,9 @@
         
         [context setParentContext:parentContext];
 
-        #if !__has_feature(objc_arc)
-            [parentContext release];
-        #endif
+#if !__has_feature(objc_arc)
+        [parentContext release];
+#endif
     }
     else
     {
@@ -94,9 +94,9 @@
 
     _managedObjectContext = context;
 
-    #if !__has_feature(objc_arc)
-        [PSC release];
-    #endif
+#if !__has_feature(objc_arc)
+    [PSC release];
+#endif
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
 }
@@ -107,9 +107,9 @@
     {
         _managedObjectModel = [NSManagedObjectModel mergedModelFromBundles:[NSArray arrayWithObject:[NSBundle mainBundle]]];
 
-        #if ! __has_feature(objc_arc)
-            [_managedObjectModel retain];
-        #endif
+#if ! __has_feature(objc_arc)
+        [_managedObjectModel retain];
+#endif
     }
 
     return _managedObjectModel;
@@ -138,9 +138,9 @@
                                                       URL:storeURL
                                                   options:storeOptions
                                                     error:error];
-    #if ! __has_feature(objc_arc)
-        [_store retain];
-    #endif
+#if ! __has_feature(objc_arc)
+    [_store retain];
+#endif
     
 	return (_store != nil);
 }
@@ -208,9 +208,9 @@
             return NO;
         }
 
-        #if !__has_feature(objc_arc)
-            [_store release];
-        #endif
+#if !__has_feature(objc_arc)
+        [_store release];
+#endif
 
         _store = nil;
     }
@@ -240,9 +240,9 @@
     NSError *error;
     _additionalContent = [self additionalContentForURL:url ofType:typeName forSaveOperation:saveOperation error:&error];
 
-    #if !__has_feature(objc_arc)
-        [_additionalContent retain];
-    #endif
+#if !__has_feature(objc_arc)
+    [_additionalContent retain];
+#endif
 
     if (!_additionalContent)
     {
@@ -255,9 +255,9 @@
     {
         [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
             
-            #if !__has_feature(objc_arc)
-                [_additionalContent release];
-            #endif
+#if !__has_feature(objc_arc)
+            [_additionalContent release];
+#endif
 
             _additionalContent = nil;
             completionHandler(error);
@@ -265,9 +265,9 @@
     }
     else
     {
-        #if !__has_feature(objc_arc)
-            [_additionalContent release];
-        #endif
+#if !__has_feature(objc_arc)
+        [_additionalContent release];
+#endif
 
         _additionalContent = nil;
         
@@ -367,9 +367,9 @@ originalContentsURL:(NSURL *)originalContentsURL
         {
             _additionalContent = [self additionalContentForURL:inURL ofType:typeName forSaveOperation:saveOp error:error];
 
-            #if !__has_feature(objc_arc)
-                [_additionalContent retain];
-            #endif
+#if !__has_feature(objc_arc)
+            [_additionalContent retain];
+#endif
             
             if (!_additionalContent) return NO;
             
@@ -379,9 +379,9 @@ originalContentsURL:(NSURL *)originalContentsURL
             {
                 if (![context save:error])
                 {
-                    #if !__has_feature(objc_arc)
-                        [_additionalContent release];
-                    #endif
+#if !__has_feature(objc_arc)
+                    [_additionalContent release];
+#endif
 
                     _additionalContent = nil;
                     return NO;
@@ -390,9 +390,9 @@ originalContentsURL:(NSURL *)originalContentsURL
             
             // And now we're ready to write for real
             BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
-            #if !__has_feature(objc_arc)
-                [_additionalContent release];
-            #endif
+#if !__has_feature(objc_arc)
+            [_additionalContent release];
+#endif
 
             _additionalContent = nil;
             return result;
@@ -492,10 +492,10 @@ originalContentsURL:(NSURL *)originalContentsURL
             
             if (!migrated) return NO;
             
-            #if ! __has_feature(objc_arc)
-                [migrated retain];
-                [_store release];
-            #endif
+#if ! __has_feature(objc_arc)
+            [migrated retain];
+            [_store release];
+#endif
 
             _store = migrated;
             
@@ -542,16 +542,16 @@ originalContentsURL:(NSURL *)originalContentsURL
         [parent performBlockAndWait:^{
             result = [self preflightURL:storeURL thenSaveContext:parent error:error];
 
-            #if ! __has_feature(objc_arc)
-                // Errors need special handling to guarantee surviving crossing the block
-                if (!result && error) [*error retain];
-            #endif
+#if ! __has_feature(objc_arc)
+            // Errors need special handling to guarantee surviving crossing the block
+            if (!result && error) [*error retain];
+#endif
             
         }];
         
-        #if ! __has_feature(objc_arc)
-            if (!result && error) [*error autorelease]; // tidy up since any error was retained on worker thread
-        #endif
+#if ! __has_feature(objc_arc)
+        if (!result && error) [*error autorelease]; // tidy up since any error was retained on worker thread
+#endif
     
     }
     else
@@ -588,9 +588,9 @@ originalContentsURL:(NSURL *)originalContentsURL
     NSFileManager *fileManager = [[NSFileManager alloc] init];
     BOOL result = [fileManager isWritableFileAtPath:[storeURL path]];
 
-    #if ! __has_feature(objc_arc)
-        [fileManager release];
-    #endif
+#if ! __has_feature(objc_arc)
+    [fileManager release];
+#endif
 
     if (result)
     {
@@ -688,9 +688,9 @@ originalContentsURL:(NSURL *)originalContentsURL
         [self removeWindowController:aController];
         [aController close];
     }
-    #if ! __has_feature(objc_arc)
-        [controllers release];
-    #endif
+#if ! __has_feature(objc_arc)
+    [controllers release];
+#endif
 
 
     @try
