@@ -244,7 +244,7 @@
     if (!_additionalContent)
     {
         NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
-        completionHandler(error);
+        if (completionHandler) completionHandler(error);
         return;
     }
     
@@ -262,7 +262,7 @@
 #endif
         _additionalContent = nil;
         
-        originalCompletionHandler(error);
+        if (originalCompletionHandler) originalCompletionHandler(error);
     };
     
     
