@@ -233,12 +233,6 @@
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
 {
-
-    if (completionHandler == NULL)
-    {
-        completionHandler = ^(NSError *error) {};
-    }
-
     NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
     
     /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, and the filesystem hasn't been touched yet.
@@ -250,7 +244,7 @@
     if (!_additionalContent)
     {
         NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
-        completionHandler(error);
+        if (completionHandler) completionHandler(error);
         return;
     }
     
@@ -268,7 +262,7 @@
 #endif
         _additionalContent = nil;
         
-        originalCompletionHandler(error);
+        if (originalCompletionHandler) originalCompletionHandler(error);
     };
     
     
