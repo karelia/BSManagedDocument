@@ -52,7 +52,14 @@
     id  _additionalContent;
 }
 
-/* The name for the persistent store file inside the document's file wrapper.  When working with the Core Data APIs, this path component is appended to the document URL provided by the NSDocument APIs.  The default name is persistentStore
+/*  The name of folder directly inside the document which the persistent store will be saved to.
+ *  The default name is @"StoreContent" to match UIManagedDocument
+ *  You can override to customize, including returning nil which means the persistent store will be saved directly inside the document package with no intermediate folder
+ */
++ (NSString *)storeContentName;
+
+/* The name for the persistent store file.
+ * The default name is @"persistentStore" to match UIManagedDocument
  */
 + (NSString *)persistentStoreName;
 

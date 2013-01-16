@@ -25,7 +25,17 @@
 
 #pragma mark UIManagedDocument-inspired methods
 
++ (NSString *)storeContentName; { return @"StoreContent"; }
 + (NSString *)persistentStoreName; { return @"persistentStore"; }
+
++ (NSURL *)persistentStoreURLForDocumentURL:(NSURL *)fileURL;
+{
+    NSString *storeContent = [self storeContentName];
+    if (storeContent) fileURL = [fileURL URLByAppendingPathComponent:storeContent];
+    
+    fileURL = [fileURL URLByAppendingPathComponent:[self persistentStoreName]];
+    return fileURL;
+}
 
 - (NSManagedObjectContext *)managedObjectContext;
 {
@@ -218,10 +228,9 @@
     
     
     // Setup the store
-    NSURL *newStoreURL = [absoluteURL URLByAppendingPathComponent:[[self class] persistentStoreName]];
     BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
     
-    result = [self configurePersistentStoreCoordinatorForURL:newStoreURL
+    result = [self configurePersistentStoreCoordinatorForURL:[[self class] persistentStoreURLForDocumentURL:absoluteURL]
                                                       ofType:typeName
                                           modelConfiguration:nil
                                                 storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
@@ -399,7 +408,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     }
     
     
-    // For the first save of a document, create the package on disk before we do anything else
+    // For the first save of a document, create the folders on disk before we do anything else
     __block BOOL result = YES;
     if (saveOp == NSSaveAsOperation ||
         (saveOp == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:inURL]))
@@ -416,6 +425,21 @@ originalContentsURL:(NSURL *)originalContentsURL
                                            withIntermediateDirectories:NO
                                                             attributes:attributes
                                                                  error:error];
+        
+        if (result)
+        {
+            // Create store content folder too
+            NSString *storeContent = [[self class] storeContentName];
+            if (storeContent)
+            {
+                NSURL *storeContentURL = [inURL URLByAppendingPathComponent:storeContent];
+                
+                result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
+                                                   withIntermediateDirectories:NO
+                                                                    attributes:attributes
+                                                                         error:error];
+            }
+        }
         
         // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed
         if (result)
@@ -452,7 +476,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     
     
-    NSURL *storeURL = [inURL URLByAppendingPathComponent:[[self class] persistentStoreName]];
+    NSURL *storeURL = [[self class] persistentStoreURLForDocumentURL:inURL];
     
     // Setup persistent store appropriately
     if (!_store)
@@ -621,7 +645,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     NSPersistentStoreCoordinator *coordinator = [[self managedObjectContext] persistentStoreCoordinator];
     
-    NSURL *storeURL = [absoluteURL URLByAppendingPathComponent:[[self class] persistentStoreName]];
+    NSURL *storeURL = [[self class] persistentStoreURLForDocumentURL:absoluteURL];
     
     if (![coordinator setURL:storeURL forPersistentStore:_store])
     {
