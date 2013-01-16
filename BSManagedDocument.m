@@ -228,9 +228,13 @@
     
     
     // Setup the store
+    // If the store happens not to exist, because the document is corrupt or in the wrong format, -configurePersistentStoreCoordinatorForURL:… will create a placeholder file which is likely undesirable! The only way to avoid that that I can see is to preflight the URL. Possible race condition, but not in any truly harmful way
+    NSURL *storeURL = [[self class] persistentStoreURLForDocumentURL:absoluteURL];
+    if (![storeURL checkResourceIsReachableAndReturnError:outError]) return NO;
+    
     BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
     
-    result = [self configurePersistentStoreCoordinatorForURL:[[self class] persistentStoreURLForDocumentURL:absoluteURL]
+    result = [self configurePersistentStoreCoordinatorForURL:storeURL
                                                       ofType:typeName
                                           modelConfiguration:nil
                                                 storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
