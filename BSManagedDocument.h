@@ -37,6 +37,13 @@
 //
 //  *   And of course, full support for Autosave-In-Place and Versions
 //
+//  NOTE: There is currently a MAJOR flaw in Core Data's handling of EXTERNALLY STORE DATA ATTRIBUTES if you're planning to use them in your document's model
+//  The subsystem that deals with externally stored attributes is unable to deal with the persistent store being moved/renamed. It will attempt to work with external data at the OLD store location, instead of the new, and throw an exception when it fails to do that
+//  The described scenario happens whenever a user moves or renames the document (this is supposed to be support behaviour on OS X). But just as importantly, when a new document gets explicitly saved by the user for the first time, it transitions from being stored in a temporary folder, to the real location, also triggering the bug
+//  Only happens when there is data added to the document large enough for Core Data to try and store it externally, so make sure you take that into account if trying to repro!
+//  Reported as rdar://problem/13023874
+//  Filing a duplicate of the report, highly appreciated. It might be worth filing a DTS incident if this affects your app to see if they can offer a workaround
+//
 
 
 #import <Cocoa/Cocoa.h>
