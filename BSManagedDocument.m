@@ -738,6 +738,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 - (void)setHasUndoManager:(BOOL)hasUndoManager { }
 
 // Could also implement -hasUndoManager. The NSPersistentDocument docs just say "Returns YES", which you could construe to mean it's overriden there. But I think what it actually means is that the default value for documents is YES, and we've overridden -setHasUndoManager: to be a no-op, so there's no reasonable way for it to return NO
+// Update: Some poking around tells me that NSPersistentDocument does in fact override -hasUndoManager. But what that implementation does, who knows! Perhaps it handles the edge case of the MOC having no undo manager
 
 #pragma mark Error Presentation
 
