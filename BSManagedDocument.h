@@ -3,7 +3,7 @@
 //
 //  Created by Sasmito Adibowo on 29-08-12.
 //  Rewritten by Mike Abdullah on 02-11-12.
-//  Copyright (c) 2012 Karelia Software, Basil Salad Software. All rights reserved.
+//  Copyright (c) 2012-2013 Karelia Software, Basil Salad Software. All rights reserved.
 //  http://basilsalad.com
 //
 //  Licensed under the BSD License <http://www.opensource.org/licenses/bsd-license>
