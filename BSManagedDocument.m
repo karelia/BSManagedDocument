@@ -747,7 +747,7 @@ originalContentsURL:(NSURL *)originalContentsURL
  */
 - (NSError *)willPresentError:(NSError *)inError
 {
-	NSError *result = inError;
+	NSError *result = nil;
     
     // customizations for NSCocoaErrorDomain
 	if ( [[inError domain] isEqualToString:NSCocoaErrorDomain] )
@@ -785,6 +785,11 @@ originalContentsURL:(NSURL *)originalContentsURL
 		}
 	}
     
+	// for errors we didn't customize, call super, passing the original error
+	if ( !result )
+	{
+		result = [super willPresentError:inError];
+	}
     
     return result;
 }
