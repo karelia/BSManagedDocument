@@ -259,7 +259,7 @@
 {
     NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
     
-    /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, and the filesystem hasn't been touched yet.
+    /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
      */
     
     NSError *error;
