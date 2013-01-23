@@ -138,7 +138,7 @@
 	// On 10.8+, the coordinator whinges but doesn't fail if you leave out this key and the file turns out to be read-only. Supplying a value makes it fail with a (not very helpful) error when the store is read-only
     if (![storeOptions objectForKey:NSReadOnlyPersistentStoreOption])
     {
-        NSMutableDictionary *mutableOptions = [NSMutableDictionary dictionaryWithCapacity:([storeOptions count] + 1)];
+        NSMutableDictionary *mutableOptions = [NSMutableDictionary dictionaryWithDictionary:storeOptions];
         [mutableOptions setObject:@NO forKey:NSReadOnlyPersistentStoreOption];
         storeOptions = mutableOptions;
     }
