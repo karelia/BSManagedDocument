@@ -41,16 +41,19 @@
 
 #import <Cocoa/Cocoa.h>
 
+// JRB: GENERAL: a readme plus a very trivial example app, set up for adding unit tests, might be helpful to both reviewers and users. It would also let us add unit tests for any problems that might be found.
 
 @interface BSManagedDocument : NSDocument
 {
-  @private
+  @private // JRB: DESIGN: prefer a class extension to private ivars, and properties to ivars
     NSManagedObjectContext	*_managedObjectContext;
     NSManagedObjectModel    *_managedObjectModel;
 	NSPersistentStore       *_store;
     
-    id  _additionalContent;
+    id  _additionalContent; // JRB: hmm, what's this? Bit of a vague name. Probably shouldn't be visible in the public API. It appears to be not owned, in which case it should probably be documented as such, even if buried in a class extension.
 }
+
+// JRB: SUBJECTIVE: Personally I prefer //-style comments wherever possible because the older style doesn't nest. Also, the trailing */ on its own line wastes vertical space.
 
 /* The name for the persistent store file inside the document's file wrapper.  When working with the Core Data APIs, this path component is appended to the document URL provided by the NSDocument APIs.  The default name is persistentStore
  */
@@ -68,6 +71,7 @@
 
 /* Customize the loading or creation of a persistent store to the coordinator.
  */
+// JRB: Unsure why this is in the public API, ie when should I as an implementor call and/or override it? Seems like an implementation detail that I shouldn't care about.
 - (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL ofType:(NSString *)fileType modelConfiguration:(NSString *)configuration storeOptions:(NSDictionary *)storeOptions error:(NSError **)error;
 
 /* Returns the Core Data store type string for the given document fileType. The default returns NSSQLiteStoreType. See NSPersistentStoreCoordinator.h for store type information.
