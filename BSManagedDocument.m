@@ -430,7 +430,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     
     // For the first save of a document, create the folders on disk before we do anything else
-    __block BOOL result = YES;
+    BOOL result = YES;
     if (saveOp == NSSaveAsOperation ||
         (saveOp == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:inURL]))
     {
@@ -707,15 +707,17 @@ originalContentsURL:(NSURL *)originalContentsURL
     [super setAutosavedContentsFileURL:absoluteURL];
     
     // Point the store towards the most recent known URL
-    if (absoluteURL)
-    {
-        [self setURLForPersistentStoreUsingFileURL:absoluteURL];
-    }
-    else
-    {
-        absoluteURL = [self fileURL];
-        if (absoluteURL) [self setURLForPersistentStoreUsingFileURL:absoluteURL];
-    }
+    absoluteURL = [self mostRecentlySavedFileURL];
+    if (absoluteURL) [self setURLForPersistentStoreUsingFileURL:absoluteURL];
+}
+
+- (NSURL *)mostRecentlySavedFileURL;
+{
+    // Before the user chooses where to place a new document, it has an autosaved URL only
+    // On 10.6-, autosaves save newer versions of the document *separate* from the original doc
+    NSURL *result = [self autosavedContentsFileURL];
+    if (!result) result = [self fileURL];
+    return result;
 }
 
 #pragma mark Reverting Documents
