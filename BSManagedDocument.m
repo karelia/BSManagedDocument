@@ -698,9 +698,10 @@ originalContentsURL:(NSURL *)originalContentsURL
     {
         [self setURLForPersistentStoreUsingFileURL:absoluteURL];
     }
-    else if ([self fileURL])
+    else
     {
-        [self setURLForPersistentStoreUsingFileURL:[self fileURL]];
+        absoluteURL = [self fileURL];
+        if (absoluteURL) [self setURLForPersistentStoreUsingFileURL:absoluteURL];
     }
 }
 
