@@ -51,7 +51,7 @@
 
 @interface BSManagedDocument : NSDocument
 {
-  @private
+  @private  // still targeting legacy runtime, so YES, I need to declare the ivars
     NSManagedObjectContext	*_managedObjectContext;
     NSManagedObjectModel    *_managedObjectModel;
 	NSPersistentStore       *_store;
@@ -80,7 +80,7 @@
  */
 @property (nonatomic, strong, readonly) NSManagedObjectModel* managedObjectModel;
 
-/* Customize the loading or creation of a persistent store to the coordinator.
+/* Subclasses can override to customize the loading or creation of a persistent store to the coordinator.
  */
 - (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL ofType:(NSString *)fileType modelConfiguration:(NSString *)configuration storeOptions:(NSDictionary *)storeOptions error:(NSError **)error;
 

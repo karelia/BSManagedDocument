@@ -187,6 +187,8 @@
     [_managedObjectModel release];
     [_store release];
     
+    // _additionalContent is unretained so shouldn't be released here
+    
     [super dealloc];
 }
 #endif
@@ -199,9 +201,6 @@
     //  A) If the file happens not to exist for some reason, Core Data unhelpfully gives "invalid file name" as the error. NSURL gives better descriptions
     //  B) When reverting a document, the persistent store will already have been removed by the time we try adding the new one (see below). If adding the new store fails that most likely leaves us stranded with no store, so it's preferable to catch errors before removing the store if possible
     if (![absoluteURL checkResourceIsReachableAndReturnError:outError]) return NO;
-    
-    
-    BOOL result = YES;
     
     
     // If have already read, then this is a revert-type affair, so must reload data from disk
@@ -245,11 +244,11 @@
     
     BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
     
-    result = [self configurePersistentStoreCoordinatorForURL:storeURL
-                                                      ofType:typeName
-                                          modelConfiguration:nil
-                                                storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
-                                                       error:outError];
+    BOOL result = [self configurePersistentStoreCoordinatorForURL:storeURL
+                                                           ofType:typeName
+                                               modelConfiguration:nil
+                                                     storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
+                                                            error:outError];
     
     
     return result;
@@ -259,10 +258,13 @@
 {
     NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
     
+    
     /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
      */
     
-    NSError *error;
+    
+    // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
+    NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
     _additionalContent = [self additionalContentForURL:url ofType:typeName forSaveOperation:saveOperation error:&error];
 
     if (!_additionalContent)
@@ -291,6 +293,8 @@
     
     
     // Save the main context on the main thread before handing off to the background
+    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
+    
     if ([[self managedObjectContext] save:&error])
     {
         [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:completionHandler];
@@ -356,10 +360,12 @@
             if (!result)
             {
                 NSDate *modDate;
-                if ([absoluteURL getResourceValue:&modDate forKey:NSURLContentModificationDateKey error:NULL] &&
-                    modDate)    // some file systems don't support mod date
+                if ([absoluteURL getResourceValue:&modDate forKey:NSURLContentModificationDateKey error:NULL])
                 {
-                    [self setFileModificationDate:modDate];
+                    if (modDate)    // some file systems don't support mod date
+                    {
+                        [self setFileModificationDate:modDate];
+                    }
                 }
             }
             
@@ -456,37 +462,8 @@ originalContentsURL:(NSURL *)originalContentsURL
             }
         }
         
-        // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed
-        if (result)
-        {
-#if (defined MAC_OS_X_VERSION_10_8) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_8   // have to check as NSURLIsPackageKey only became writable in 10.8
-            NSError *error;
-            if (![inURL setResourceValue:@YES forKey:NSURLIsPackageKey error:&error])
-            {
-                NSLog(@"Error marking document as a package: %@", error);
-            }
-#else
-            FSRef fileRef;
-            if (CFURLGetFSRef((CFURLRef)inURL, &fileRef))
-            {
-                // Get the file's current info
-                FSCatalogInfo fileInfo;
-                OSErr error = FSGetCatalogInfo(&fileRef, kFSCatInfoFinderInfo, &fileInfo, NULL, NULL, NULL);
-                
-                if (!error)
-                {
-                    // Adjust the bundle bit
-                    FolderInfo *finderInfo = (FolderInfo *)fileInfo.finderInfo;
-                    finderInfo->finderFlags |= kHasBundle;
-                    
-                    // Set the altered flags of the file
-                    error = FSSetCatalogInfo(&fileRef, kFSCatInfoFinderInfo, &fileInfo);
-                }
-                
-                if (error) NSLog(@"OSError %i setting bundle bit for %@", error, [inURL path]);
-            }
-#endif
-        }
+        // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
+        if (result) [self setBundleBitForDirectoryAtURL:inURL];
     }
     
     
@@ -556,8 +533,6 @@ originalContentsURL:(NSURL *)originalContentsURL
     }
     
     
-    
-    
     // Update metadata
     result = [self updateMetadataForPersistentStore:_store error:error];
     if (!result) return NO;
@@ -576,7 +551,7 @@ originalContentsURL:(NSURL *)originalContentsURL
             result = [self preflightURL:storeURL thenSaveContext:parent error:error];
 
 #if ! __has_feature(objc_arc)
-            // Errors need special handling to guarantee surviving crossing the block
+            // Errors need special handling to guarantee surviving crossing the block. http://www.mikeabdullah.net/cross-thread-error-passing.html
             if (!result && error) [*error retain];
 #endif
             
@@ -609,6 +584,34 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     
     return result;
+}
+
+- (void)setBundleBitForDirectoryAtURL:(NSURL *)url;
+{
+#if (defined MAC_OS_X_VERSION_10_8) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_8   // have to check as NSURLIsPackageKey only became writable in 10.8
+    NSError *error;
+    if (![url setResourceValue:@YES forKey:NSURLIsPackageKey error:&error])
+    {
+        NSLog(@"Error marking document as a package: %@", error);
+    }
+#else
+    FSRef fileRef;
+    if (CFURLGetFSRef((CFURLRef)url, &fileRef))
+    {
+        FSCatalogInfo fileInfo;
+        OSErr error = FSGetCatalogInfo(&fileRef, kFSCatInfoFinderInfo, &fileInfo, NULL, NULL, NULL);
+        
+        if (!error)
+        {
+            FolderInfo *finderInfo = (FolderInfo *)fileInfo.finderInfo;
+            finderInfo->finderFlags |= kHasBundle;
+            
+            error = FSSetCatalogInfo(&fileRef, kFSCatInfoFinderInfo, &fileInfo);
+        }
+        
+        if (error) NSLog(@"OSError %i setting bundle bit for %@", error, [url path]);
+    }
+#endif
 }
 
 - (BOOL)preflightURL:(NSURL *)storeURL thenSaveContext:(NSManagedObjectContext *)context error:(NSError **)error;
@@ -693,7 +696,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 {
     [super setAutosavedContentsFileURL:absoluteURL];
     
-    // If this the only copy, tell the store its new location
+    // Point the store towards the most recent known URL
     if (absoluteURL)
     {
         [self setURLForPersistentStoreUsingFileURL:absoluteURL];
@@ -756,7 +759,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 		NSInteger errorCode = [inError code];
 		
 		// is this a Core Data validation error?
-		if ( (errorCode >= NSValidationErrorMinimum) && (errorCode <= NSValidationErrorMaximum) )
+		if ( (NSValidationErrorMinimum <= errorCode) && (errorCode <= NSValidationErrorMaximum) )
 		{
 			// If there are multiple validation errors, inError will be a NSValidationMultipleErrorsError
 			// and all the validation errors will be in an array in the userInfo dictionary for key NSDetailedErrorsKey
