@@ -533,39 +533,9 @@ originalContentsURL:(NSURL *)originalContentsURL
     }
     
     
-    // Update metadata
-    result = [self updateMetadataForPersistentStore:_store error:error];
+    // Right, let's get on with it!
+    result = [self writeStoreContentToURL:storeURL error:error];
     if (!result) return NO;
-    
-    
-    // Do the save. On 10.6 it's just one call, all on main thread. 10.7+ have to work on the context's private queue
-    NSManagedObjectContext *context = [self managedObjectContext];
-    
-    if ([context respondsToSelector:@selector(parentContext)])
-    {
-        [self unblockUserInteraction];
-        
-        NSManagedObjectContext *parent = [context parentContext];
-        
-        [parent performBlockAndWait:^{
-            result = [self preflightURL:storeURL thenSaveContext:parent error:error];
-
-#if ! __has_feature(objc_arc)
-            // Errors need special handling to guarantee surviving crossing the block. http://www.mikeabdullah.net/cross-thread-error-passing.html
-            if (!result && error) [*error retain];
-#endif
-            
-        }];
-        
-#if ! __has_feature(objc_arc)
-        if (!result && error) [*error autorelease]; // tidy up since any error was retained on worker thread
-#endif
-    
-    }
-    else
-    {
-        result = [self preflightURL:storeURL thenSaveContext:context error:error];
-    }
     
     if (result)
     {
@@ -612,6 +582,46 @@ originalContentsURL:(NSURL *)originalContentsURL
         if (error) NSLog(@"OSError %i setting bundle bit for %@", error, [url path]);
     }
 #endif
+}
+
+- (BOOL)writeStoreContentToURL:(NSURL *)storeURL error:(NSError **)error;
+{
+    // First update metadata
+    __block BOOL result = [self updateMetadataForPersistentStore:_store error:error];
+    if (!result) return NO;
+    
+    
+    // On 10.6 saving is just one call, all on main thread. 10.7+ have to work on the context's private queue
+    NSManagedObjectContext *context = [self managedObjectContext];
+    
+    if ([context respondsToSelector:@selector(parentContext)])
+    {
+        [self unblockUserInteraction];
+        
+        NSManagedObjectContext *parent = [context parentContext];
+        
+        [parent performBlockAndWait:^{
+            result = [self preflightURL:storeURL thenSaveContext:parent error:error];
+            
+#if ! __has_feature(objc_arc)
+            // Errors need special handling to guarantee surviving crossing the block. http://www.mikeabdullah.net/cross-thread-error-passing.html
+            if (!result && error) [*error retain];
+#endif
+            
+        }];
+        
+#if ! __has_feature(objc_arc)
+        if (!result && error) [*error autorelease]; // tidy up since any error was retained on worker thread
+#endif
+        
+    }
+    else
+    {
+        result = [self preflightURL:storeURL thenSaveContext:context error:error];
+    }
+    
+    
+    return result;
 }
 
 - (BOOL)preflightURL:(NSURL *)storeURL thenSaveContext:(NSManagedObjectContext *)context error:(NSError **)error;
