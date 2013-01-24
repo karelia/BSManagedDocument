@@ -159,13 +159,13 @@
 
 - (NSString *)persistentStoreTypeForFileType:(NSString *)fileType { return NSSQLiteStoreType; }
 
-- (id)additionalContentForURL:(NSURL *)absoluteURL ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
+- (id)additionalContentForURL:(NSURL *)absoluteURL saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
 {
 	// Need to hand back something so as not to indicate there was an error
     return [NSNull null];
 }
 
-- (BOOL)writeAdditionalContent:(id)content toURL:(NSURL *)absoluteURL forSaveOperation:(NSSaveOperationType)saveOperation originalContentsURL:(NSURL *)absoluteOriginalContentsURL error:(NSError **)error;
+- (BOOL)writeAdditionalContent:(id)content toURL:(NSURL *)absoluteURL originalContentsURL:(NSURL *)absoluteOriginalContentsURL error:(NSError **)error;
 {
     return YES;
 }
@@ -265,7 +265,7 @@
     
     // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
     NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
-    _additionalContent = [self additionalContentForURL:url ofType:typeName forSaveOperation:saveOperation error:&error];
+    _additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
 
     if (!_additionalContent)
     {
@@ -397,7 +397,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 		// For example, duplicating a document calls -writeSafely… directly. Also, using the old synchronous saving APIs bring you to this point
         if ([NSThread isMainThread])
         {
-            _additionalContent = [self additionalContentForURL:inURL ofType:typeName forSaveOperation:saveOp error:error];
+            _additionalContent = [self additionalContentForURL:inURL saveOperation:saveOp error:error];
             if (!_additionalContent) return NO;
             
             // Worried that _additionalContent hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
@@ -511,7 +511,6 @@ originalContentsURL:(NSURL *)originalContentsURL
             
             return [self writeAdditionalContent:_additionalContent
                                           toURL:inURL
-                               forSaveOperation:saveOp
                             originalContentsURL:originalContentsURL
                                           error:error];
         }
@@ -539,7 +538,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     if (result)
     {
-        result = [self writeAdditionalContent:_additionalContent toURL:inURL forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
+        result = [self writeAdditionalContent:_additionalContent toURL:inURL originalContentsURL:originalContentsURL error:error];
     }
     
     

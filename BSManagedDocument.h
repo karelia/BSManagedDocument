@@ -103,13 +103,13 @@
 /* An optional call out on the main thread to handle non-Core Data content in the document's file wrapper. The returned object will be passed to -writeAdditionalContent:… It is not necessary to call super.
  *  Called before any contexts are saved, so may be a good point to do some last-minute adjustments to your Core Data objects
  */
-- (id)additionalContentForURL:(NSURL *)absoluteURL ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
+- (id)additionalContentForURL:(NSURL *)absoluteURL saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
 
 /* An optional call out by writeToURL:ofType:forSaveOperation:originalContentsURL:error: to handle non-Core Data content in the document's package. The Core Data content is handled by the primary NSDocument -writeToURL:ofType:forSaveOperation:originalContentsURL:error: method.  It is not necessary to call super.
  * This method is called after context(s) have been saved to disk, so the document is already partially written. You should avoid returning NO as that reports an error to the user, but leaves the document in a partially updated state.
  * You should NEVER attempt to access the main context's objects or other document state from this methods, as user interaction may have been unblocked, causing the state to be out of sync with that being written. Instead, override -additionalContentForURL:… to capture such information
  */
-- (BOOL)writeAdditionalContent:(id)content toURL:(NSURL *)absoluteURL forSaveOperation:(NSSaveOperationType)saveOperation originalContentsURL:(NSURL *)absoluteOriginalContentsURL error:(NSError **)error;
+- (BOOL)writeAdditionalContent:(id)content toURL:(NSURL *)absoluteURL originalContentsURL:(NSURL *)absoluteOriginalContentsURL error:(NSError **)error;
 
 /* Called just before the context is saved, giving you a chance to adjust the store's metadata. Default implementation leaves the existing metadata untouched and returns YES. You should only override to return NO if storing the metadata went wrong in a critical way that stops the doc from being saved. Called on an arbitrary thread, so up to you to bounce over to the correct one if needed.
  */
