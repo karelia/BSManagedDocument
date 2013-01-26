@@ -13,6 +13,6 @@
 @property (assign) IBOutlet NSArrayController *arrayController;
 @property (assign) IBOutlet NSTextView *contentView;
 
-- (IBAction)addFile:(id)sender;
+- (IBAction)addAFile:(id)sender;
 
 @end

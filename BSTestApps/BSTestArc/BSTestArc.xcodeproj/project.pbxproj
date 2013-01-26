@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		AD4644A416B3EAC000839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A316B3EAC000839092 /* BSManagedDocument.m */; };
-		AD4644AD16B3ECCA00839092 /* Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644AC16B3ECCA00839092 /* Ebook.m */; };
 		AD4644BB16B3F8EE00839092 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD4644BA16B3F8EE00839092 /* SenTestingKit.framework */; };
 		AD4644BC16B3F8EE00839092 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD4644C216B3F8EE00839092 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD4644C016B3F8EE00839092 /* InfoPlist.strings */; };
@@ -17,6 +16,7 @@
 		AD4644FB16B3FF4900839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A316B3EAC000839092 /* BSManagedDocument.m */; };
 		AD46450D16B401CA00839092 /* version1ARC.bstest_arc in Resources */ = {isa = PBXBuildFile; fileRef = AD46450C16B401CA00839092 /* version1ARC.bstest_arc */; };
 		AD46452616B40AB400839092 /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AD4644F716B3FF1E00839092 /* Model.xcdatamodeld */; };
+		AD46454116B4123700839092 /* Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = AD46454016B4123700839092 /* Ebook.m */; };
 		AD6039E916834D8E00B85606 /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD6039E816834D8E00B85606 /* WindowController.m */; };
 		AD93626C1681C29000B4FA9C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD9362761681C29000B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362741681C29000B4FA9C /* InfoPlist.strings */; };
@@ -40,8 +40,6 @@
 /* Begin PBXFileReference section */
 		AD4644A216B3EAC000839092 /* BSManagedDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BSManagedDocument.h; path = ../../BSManagedDocument.h; sourceTree = SOURCE_ROOT; };
 		AD4644A316B3EAC000839092 /* BSManagedDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BSManagedDocument.m; path = ../../BSManagedDocument.m; sourceTree = SOURCE_ROOT; };
-		AD4644AB16B3ECCA00839092 /* Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ebook.h; sourceTree = "<group>"; };
-		AD4644AC16B3ECCA00839092 /* Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Ebook.m; sourceTree = "<group>"; };
 		AD4644B916B3F8EE00839092 /* BSTestArcTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BSTestArcTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD4644BA16B3F8EE00839092 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		AD4644BF16B3F8EE00839092 /* BSTestArcTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "BSTestArcTests-Info.plist"; sourceTree = "<group>"; };
@@ -51,6 +49,8 @@
 		AD4644F816B3FF1E00839092 /* Model 1.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Model 1.xcdatamodel"; sourceTree = "<group>"; };
 		AD4644F916B3FF1E00839092 /* Model 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Model 2.xcdatamodel"; sourceTree = "<group>"; };
 		AD46450C16B401CA00839092 /* version1ARC.bstest_arc */ = {isa = PBXFileReference; lastKnownFileType = folder; path = version1ARC.bstest_arc; sourceTree = "<group>"; };
+		AD46453F16B4123700839092 /* Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ebook.h; sourceTree = "<group>"; };
+		AD46454016B4123700839092 /* Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Ebook.m; sourceTree = "<group>"; };
 		AD6039E716834D8E00B85606 /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		AD6039E816834D8E00B85606 /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
 		AD9362671681C29000B4FA9C /* BSTestArc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTestArc.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -190,8 +190,8 @@
 		EEDDF8D41682708B00AD6D0D /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				AD4644AB16B3ECCA00839092 /* Ebook.h */,
-				AD4644AC16B3ECCA00839092 /* Ebook.m */,
+				AD46453F16B4123700839092 /* Ebook.h */,
+				AD46454016B4123700839092 /* Ebook.m */,
 				AD4644F716B3FF1E00839092 /* Model.xcdatamodeld */,
 			);
 			name = Model;
@@ -331,8 +331,8 @@
 				AD93627F1681C29000B4FA9C /* Document.m in Sources */,
 				AD6039E916834D8E00B85606 /* WindowController.m in Sources */,
 				AD4644A416B3EAC000839092 /* BSManagedDocument.m in Sources */,
-				AD4644AD16B3ECCA00839092 /* Ebook.m in Sources */,
 				AD4644FA16B3FF1E00839092 /* Model.xcdatamodeld in Sources */,
+				AD46454116B4123700839092 /* Ebook.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

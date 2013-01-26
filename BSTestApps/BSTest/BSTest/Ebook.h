@@ -14,5 +14,6 @@
 
 @property (nonatomic, retain) NSData * contents;
 @property (nonatomic, retain) NSString * title;
+@property (nonatomic, retain) NSDate *importDate;
 
 @end

@@ -13,5 +13,10 @@
 
 @dynamic contents;
 @dynamic title;
+@dynamic importDate;
+
+- (void)awakeFromInsert {
+    self.importDate = [NSDate date];
+}
 
 @end
