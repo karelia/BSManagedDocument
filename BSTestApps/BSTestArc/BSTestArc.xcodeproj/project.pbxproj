@@ -13,6 +13,10 @@
 		AD4644BC16B3F8EE00839092 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD4644C216B3F8EE00839092 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD4644C016B3F8EE00839092 /* InfoPlist.strings */; };
 		AD4644EE16B3FC9F00839092 /* BSManagedDocumentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644ED16B3FC9F00839092 /* BSManagedDocumentTests.m */; };
+		AD4644FA16B3FF1E00839092 /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AD4644F716B3FF1E00839092 /* Model.xcdatamodeld */; };
+		AD4644FB16B3FF4900839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A316B3EAC000839092 /* BSManagedDocument.m */; };
+		AD46450D16B401CA00839092 /* version1ARC.bstest_arc in Resources */ = {isa = PBXBuildFile; fileRef = AD46450C16B401CA00839092 /* version1ARC.bstest_arc */; };
+		AD46452616B40AB400839092 /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AD4644F716B3FF1E00839092 /* Model.xcdatamodeld */; };
 		AD6039E916834D8E00B85606 /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD6039E816834D8E00B85606 /* WindowController.m */; };
 		AD93626C1681C29000B4FA9C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD9362761681C29000B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362741681C29000B4FA9C /* InfoPlist.strings */; };
@@ -21,7 +25,6 @@
 		AD93627F1681C29000B4FA9C /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = AD93627E1681C29000B4FA9C /* Document.m */; };
 		AD9362821681C29000B4FA9C /* Document.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362801681C29000B4FA9C /* Document.xib */; };
 		AD9362851681C29000B4FA9C /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362831681C29000B4FA9C /* MainMenu.xib */; };
-		EEDDF8D7168270A400AD6D0D /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = EEDDF8D5168270A400AD6D0D /* Model.xcdatamodeld */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +48,9 @@
 		AD4644C116B3F8EE00839092 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		AD4644C616B3F8EE00839092 /* BSTestArcTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BSTestArcTests-Prefix.pch"; sourceTree = "<group>"; };
 		AD4644ED16B3FC9F00839092 /* BSManagedDocumentTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BSManagedDocumentTests.m; sourceTree = "<group>"; };
+		AD4644F816B3FF1E00839092 /* Model 1.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Model 1.xcdatamodel"; sourceTree = "<group>"; };
+		AD4644F916B3FF1E00839092 /* Model 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Model 2.xcdatamodel"; sourceTree = "<group>"; };
+		AD46450C16B401CA00839092 /* version1ARC.bstest_arc */ = {isa = PBXFileReference; lastKnownFileType = folder; path = version1ARC.bstest_arc; sourceTree = "<group>"; };
 		AD6039E716834D8E00B85606 /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		AD6039E816834D8E00B85606 /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
 		AD9362671681C29000B4FA9C /* BSTestArc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTestArc.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -62,7 +68,6 @@
 		AD9362811681C29000B4FA9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/Document.xib; sourceTree = "<group>"; };
 		AD9362841681C29000B4FA9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		EEDDF8D216826F6F00AD6D0D /* BSTestArc.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = BSTestArc.entitlements; sourceTree = "<group>"; };
-		EEDDF8D6168270A400AD6D0D /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +94,7 @@
 		AD4644BD16B3F8EE00839092 /* BSTestArcTests */ = {
 			isa = PBXGroup;
 			children = (
+				AD46450716B4012E00839092 /* Versioned Test Files */,
 				AD4644BE16B3F8EE00839092 /* Supporting Files */,
 				AD4644ED16B3FC9F00839092 /* BSManagedDocumentTests.m */,
 			);
@@ -103,6 +109,14 @@
 				AD4644C616B3F8EE00839092 /* BSTestArcTests-Prefix.pch */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		AD46450716B4012E00839092 /* Versioned Test Files */ = {
+			isa = PBXGroup;
+			children = (
+				AD46450C16B401CA00839092 /* version1ARC.bstest_arc */,
+			);
+			name = "Versioned Test Files";
 			sourceTree = "<group>";
 		};
 		AD93625C1681C29000B4FA9C = {
@@ -178,7 +192,7 @@
 			children = (
 				AD4644AB16B3ECCA00839092 /* Ebook.h */,
 				AD4644AC16B3ECCA00839092 /* Ebook.m */,
-				EEDDF8D5168270A400AD6D0D /* Model.xcdatamodeld */,
+				AD4644F716B3FF1E00839092 /* Model.xcdatamodeld */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -265,6 +279,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AD4644C216B3F8EE00839092 /* InfoPlist.strings in Resources */,
+				AD46450D16B401CA00839092 /* version1ARC.bstest_arc in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -303,6 +318,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AD4644EE16B3FC9F00839092 /* BSManagedDocumentTests.m in Sources */,
+				AD4644FB16B3FF4900839092 /* BSManagedDocument.m in Sources */,
+				AD46452616B40AB400839092 /* Model.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,10 +329,10 @@
 			files = (
 				AD9362781681C29000B4FA9C /* main.m in Sources */,
 				AD93627F1681C29000B4FA9C /* Document.m in Sources */,
-				EEDDF8D7168270A400AD6D0D /* Model.xcdatamodeld in Sources */,
 				AD6039E916834D8E00B85606 /* WindowController.m in Sources */,
 				AD4644A416B3EAC000839092 /* BSManagedDocument.m in Sources */,
 				AD4644AD16B3ECCA00839092 /* Ebook.m in Sources */,
+				AD4644FA16B3FF1E00839092 /* Model.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -490,6 +507,7 @@
 				AD4644C916B3F8EE00839092 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		AD9362611681C29000B4FA9C /* Build configuration list for PBXProject "BSTestArc" */ = {
 			isa = XCConfigurationList;
@@ -512,12 +530,13 @@
 /* End XCConfigurationList section */
 
 /* Begin XCVersionGroup section */
-		EEDDF8D5168270A400AD6D0D /* Model.xcdatamodeld */ = {
+		AD4644F716B3FF1E00839092 /* Model.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
-				EEDDF8D6168270A400AD6D0D /* Model.xcdatamodel */,
+				AD4644F816B3FF1E00839092 /* Model 1.xcdatamodel */,
+				AD4644F916B3FF1E00839092 /* Model 2.xcdatamodel */,
 			);
-			currentVersion = EEDDF8D6168270A400AD6D0D /* Model.xcdatamodel */;
+			currentVersion = AD4644F916B3FF1E00839092 /* Model 2.xcdatamodel */;
 			name = Model.xcdatamodeld;
 			path = ../../Common/Model.xcdatamodeld;
 			sourceTree = "<group>";

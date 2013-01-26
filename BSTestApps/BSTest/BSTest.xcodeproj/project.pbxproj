@@ -13,13 +13,16 @@
 		AD4644D216B3F94100839092 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93623C1681C0DF00B4FA9C /* Cocoa.framework */; };
 		AD4644D816B3F94100839092 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD4644D616B3F94100839092 /* InfoPlist.strings */; };
 		AD4644F116B3FD5800839092 /* BSManagedDocumentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644F016B3FD5800839092 /* BSManagedDocumentTests.m */; };
+		AD4644F616B3FEF900839092 /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AD4644F316B3FEF800839092 /* Model.xcdatamodeld */; };
+		AD4644FC16B3FF5000839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A616B3EAC900839092 /* BSManagedDocument.m */; };
+		AD46450F16B401D900839092 /* version1MRC.bstest in Resources */ = {isa = PBXBuildFile; fileRef = AD46450E16B401D900839092 /* version1MRC.bstest */; };
+		AD46452816B40ABC00839092 /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AD4644F316B3FEF800839092 /* Model.xcdatamodeld */; };
 		AD9362471681C0DF00B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362451681C0DF00B4FA9C /* InfoPlist.strings */; };
 		AD9362491681C0DF00B4FA9C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362481681C0DF00B4FA9C /* main.m */; };
 		AD93624D1681C0DF00B4FA9C /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = AD93624B1681C0DF00B4FA9C /* Credits.rtf */; };
 		AD9362501681C0DF00B4FA9C /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = AD93624F1681C0DF00B4FA9C /* Document.m */; };
 		AD9362531681C0DF00B4FA9C /* Document.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362511681C0DF00B4FA9C /* Document.xib */; };
 		AD9362561681C0DF00B4FA9C /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362541681C0DF00B4FA9C /* MainMenu.xib */; };
-		AD9362A71681CDAA00B4FA9C /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AD9362A51681CDAA00B4FA9C /* Model.xcdatamodeld */; };
 		AD9362E71681E3A400B4FA9C /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362E61681E3A300B4FA9C /* WindowController.m */; };
 		AD9362E91682065F00B4FA9C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93623C1681C0DF00B4FA9C /* Cocoa.framework */; };
 /* End PBXBuildFile section */
@@ -45,6 +48,9 @@
 		AD4644D716B3F94100839092 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		AD4644DC16B3F94100839092 /* BSTestTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BSTestTests-Prefix.pch"; sourceTree = "<group>"; };
 		AD4644F016B3FD5800839092 /* BSManagedDocumentTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BSManagedDocumentTests.m; sourceTree = "<group>"; };
+		AD4644F416B3FEF800839092 /* Model 1.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Model 1.xcdatamodel"; sourceTree = "<group>"; };
+		AD4644F516B3FEF800839092 /* Model 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Model 2.xcdatamodel"; sourceTree = "<group>"; };
+		AD46450E16B401D900839092 /* version1MRC.bstest */ = {isa = PBXFileReference; lastKnownFileType = folder; path = version1MRC.bstest; sourceTree = "<group>"; };
 		AD9362381681C0DF00B4FA9C /* BSTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD93623C1681C0DF00B4FA9C /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		AD93623F1681C0DF00B4FA9C /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -59,7 +65,6 @@
 		AD93624F1681C0DF00B4FA9C /* Document.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Document.m; sourceTree = "<group>"; };
 		AD9362521681C0DF00B4FA9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/Document.xib; sourceTree = "<group>"; };
 		AD9362551681C0DF00B4FA9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		AD9362A61681CDAA00B4FA9C /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
 		AD9362E51681E3A300B4FA9C /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		AD9362E61681E3A300B4FA9C /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
 		AD9362E8168205E200B4FA9C /* BSTest.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = BSTest.entitlements; sourceTree = "<group>"; };
@@ -89,8 +94,9 @@
 		AD4644D316B3F94100839092 /* BSTestTests */ = {
 			isa = PBXGroup;
 			children = (
-				AD4644F016B3FD5800839092 /* BSManagedDocumentTests.m */,
 				AD4644D416B3F94100839092 /* Supporting Files */,
+				AD4644FE16B4004F00839092 /* Versioned Test Files */,
+				AD4644F016B3FD5800839092 /* BSManagedDocumentTests.m */,
 			);
 			path = BSTestTests;
 			sourceTree = "<group>";
@@ -103,6 +109,14 @@
 				AD4644DC16B3F94100839092 /* BSTestTests-Prefix.pch */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		AD4644FE16B4004F00839092 /* Versioned Test Files */ = {
+			isa = PBXGroup;
+			children = (
+				AD46450E16B401D900839092 /* version1MRC.bstest */,
+			);
+			name = "Versioned Test Files";
 			sourceTree = "<group>";
 		};
 		AD93622D1681C0DF00B4FA9C = {
@@ -188,7 +202,7 @@
 			children = (
 				AD4644B116B3ECF200839092 /* Ebook.h */,
 				AD4644B216B3ECF200839092 /* Ebook.m */,
-				AD9362A51681CDAA00B4FA9C /* Model.xcdatamodeld */,
+				AD4644F316B3FEF800839092 /* Model.xcdatamodeld */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -265,6 +279,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AD4644D816B3F94100839092 /* InfoPlist.strings in Resources */,
+				AD46450F16B401D900839092 /* version1MRC.bstest in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -303,6 +318,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AD4644F116B3FD5800839092 /* BSManagedDocumentTests.m in Sources */,
+				AD4644FC16B3FF5000839092 /* BSManagedDocument.m in Sources */,
+				AD46452816B40ABC00839092 /* Model.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,10 +329,10 @@
 			files = (
 				AD9362491681C0DF00B4FA9C /* main.m in Sources */,
 				AD9362501681C0DF00B4FA9C /* Document.m in Sources */,
-				AD9362A71681CDAA00B4FA9C /* Model.xcdatamodeld in Sources */,
 				AD9362E71681E3A400B4FA9C /* WindowController.m in Sources */,
 				AD4644A716B3EAC900839092 /* BSManagedDocument.m in Sources */,
 				AD4644B316B3ECF200839092 /* Ebook.m in Sources */,
+				AD4644F616B3FEF900839092 /* Model.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,7 +393,7 @@
 		AD4644DE16B3F94100839092 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = NO;
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -390,7 +407,7 @@
 		AD4644DF16B3F94100839092 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = NO;
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -490,6 +507,7 @@
 				AD4644DF16B3F94100839092 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		AD9362321681C0DF00B4FA9C /* Build configuration list for PBXProject "BSTest" */ = {
 			isa = XCConfigurationList;
@@ -512,12 +530,13 @@
 /* End XCConfigurationList section */
 
 /* Begin XCVersionGroup section */
-		AD9362A51681CDAA00B4FA9C /* Model.xcdatamodeld */ = {
+		AD4644F316B3FEF800839092 /* Model.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
-				AD9362A61681CDAA00B4FA9C /* Model.xcdatamodel */,
+				AD4644F416B3FEF800839092 /* Model 1.xcdatamodel */,
+				AD4644F516B3FEF800839092 /* Model 2.xcdatamodel */,
 			);
-			currentVersion = AD9362A61681CDAA00B4FA9C /* Model.xcdatamodel */;
+			currentVersion = AD4644F516B3FEF800839092 /* Model 2.xcdatamodel */;
 			name = Model.xcdatamodeld;
 			path = ../../Common/Model.xcdatamodeld;
 			sourceTree = "<group>";

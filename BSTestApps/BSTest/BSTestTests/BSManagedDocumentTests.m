@@ -29,7 +29,12 @@
 #pragma mark -  Tests
 
 - (void)testAutomaticDocumentMigrationFromVersion1 {
+    NSURL *version1URL = [[NSBundle bundleForClass:[self class]] URLForResource:@"version1MRC" withExtension:@"bstest"];
 
+    NSError *error;
+    BOOL readingResult = [_document readFromURL:version1URL ofType:@"DocumentType" error:&error];
+
+    STAssertTrue(readingResult, @"Should be able to read version1 files, error is %@", error);
 }
 
 @end
