@@ -12,7 +12,7 @@
 		AD4644D116B3F94100839092 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD4644D016B3F94100839092 /* SenTestingKit.framework */; };
 		AD4644D216B3F94100839092 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93623C1681C0DF00B4FA9C /* Cocoa.framework */; };
 		AD4644D816B3F94100839092 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD4644D616B3F94100839092 /* InfoPlist.strings */; };
-		AD4644DB16B3F94100839092 /* BSTestTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644DA16B3F94100839092 /* BSTestTests.m */; };
+		AD4644F116B3FD5800839092 /* BSManagedDocumentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644F016B3FD5800839092 /* BSManagedDocumentTests.m */; };
 		AD9362471681C0DF00B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362451681C0DF00B4FA9C /* InfoPlist.strings */; };
 		AD9362491681C0DF00B4FA9C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362481681C0DF00B4FA9C /* main.m */; };
 		AD93624D1681C0DF00B4FA9C /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = AD93624B1681C0DF00B4FA9C /* Credits.rtf */; };
@@ -43,9 +43,8 @@
 		AD4644D016B3F94100839092 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		AD4644D516B3F94100839092 /* BSTestTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "BSTestTests-Info.plist"; sourceTree = "<group>"; };
 		AD4644D716B3F94100839092 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		AD4644D916B3F94100839092 /* BSTestTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BSTestTests.h; sourceTree = "<group>"; };
-		AD4644DA16B3F94100839092 /* BSTestTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSTestTests.m; sourceTree = "<group>"; };
 		AD4644DC16B3F94100839092 /* BSTestTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BSTestTests-Prefix.pch"; sourceTree = "<group>"; };
+		AD4644F016B3FD5800839092 /* BSManagedDocumentTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BSManagedDocumentTests.m; sourceTree = "<group>"; };
 		AD9362381681C0DF00B4FA9C /* BSTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD93623C1681C0DF00B4FA9C /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		AD93623F1681C0DF00B4FA9C /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -90,8 +89,7 @@
 		AD4644D316B3F94100839092 /* BSTestTests */ = {
 			isa = PBXGroup;
 			children = (
-				AD4644D916B3F94100839092 /* BSTestTests.h */,
-				AD4644DA16B3F94100839092 /* BSTestTests.m */,
+				AD4644F016B3FD5800839092 /* BSManagedDocumentTests.m */,
 				AD4644D416B3F94100839092 /* Supporting Files */,
 			);
 			path = BSTestTests;
@@ -304,7 +302,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AD4644DB16B3F94100839092 /* BSTestTests.m in Sources */,
+				AD4644F116B3FD5800839092 /* BSManagedDocumentTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

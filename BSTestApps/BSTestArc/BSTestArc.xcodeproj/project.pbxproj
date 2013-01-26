@@ -12,7 +12,7 @@
 		AD4644BB16B3F8EE00839092 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD4644BA16B3F8EE00839092 /* SenTestingKit.framework */; };
 		AD4644BC16B3F8EE00839092 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD4644C216B3F8EE00839092 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD4644C016B3F8EE00839092 /* InfoPlist.strings */; };
-		AD4644C516B3F8EE00839092 /* BSTestArcTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644C416B3F8EE00839092 /* BSTestArcTests.m */; };
+		AD4644EE16B3FC9F00839092 /* BSManagedDocumentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644ED16B3FC9F00839092 /* BSManagedDocumentTests.m */; };
 		AD6039E916834D8E00B85606 /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD6039E816834D8E00B85606 /* WindowController.m */; };
 		AD93626C1681C29000B4FA9C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD9362761681C29000B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362741681C29000B4FA9C /* InfoPlist.strings */; };
@@ -43,9 +43,8 @@
 		AD4644BA16B3F8EE00839092 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		AD4644BF16B3F8EE00839092 /* BSTestArcTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "BSTestArcTests-Info.plist"; sourceTree = "<group>"; };
 		AD4644C116B3F8EE00839092 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		AD4644C316B3F8EE00839092 /* BSTestArcTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BSTestArcTests.h; sourceTree = "<group>"; };
-		AD4644C416B3F8EE00839092 /* BSTestArcTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSTestArcTests.m; sourceTree = "<group>"; };
 		AD4644C616B3F8EE00839092 /* BSTestArcTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BSTestArcTests-Prefix.pch"; sourceTree = "<group>"; };
+		AD4644ED16B3FC9F00839092 /* BSManagedDocumentTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BSManagedDocumentTests.m; sourceTree = "<group>"; };
 		AD6039E716834D8E00B85606 /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		AD6039E816834D8E00B85606 /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
 		AD9362671681C29000B4FA9C /* BSTestArc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTestArc.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -90,9 +89,8 @@
 		AD4644BD16B3F8EE00839092 /* BSTestArcTests */ = {
 			isa = PBXGroup;
 			children = (
-				AD4644C316B3F8EE00839092 /* BSTestArcTests.h */,
-				AD4644C416B3F8EE00839092 /* BSTestArcTests.m */,
 				AD4644BE16B3F8EE00839092 /* Supporting Files */,
+				AD4644ED16B3FC9F00839092 /* BSManagedDocumentTests.m */,
 			);
 			path = BSTestArcTests;
 			sourceTree = "<group>";
@@ -304,7 +302,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AD4644C516B3F8EE00839092 /* BSTestArcTests.m in Sources */,
+				AD4644EE16B3FC9F00839092 /* BSManagedDocumentTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
