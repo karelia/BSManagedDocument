@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:BSTestArc/BSTestArc.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:BSTest/BSTest.xcodeproj">
+   </FileRef>
+</Workspace>
