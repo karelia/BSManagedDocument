@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		AD4644A416B3EAC000839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A316B3EAC000839092 /* BSManagedDocument.m */; };
 		AD4644AD16B3ECCA00839092 /* Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644AC16B3ECCA00839092 /* Ebook.m */; };
+		AD4644BB16B3F8EE00839092 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD4644BA16B3F8EE00839092 /* SenTestingKit.framework */; };
+		AD4644BC16B3F8EE00839092 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
+		AD4644C216B3F8EE00839092 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD4644C016B3F8EE00839092 /* InfoPlist.strings */; };
+		AD4644C516B3F8EE00839092 /* BSTestArcTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644C416B3F8EE00839092 /* BSTestArcTests.m */; };
 		AD6039E916834D8E00B85606 /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD6039E816834D8E00B85606 /* WindowController.m */; };
 		AD93626C1681C29000B4FA9C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD9362761681C29000B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362741681C29000B4FA9C /* InfoPlist.strings */; };
@@ -20,11 +24,28 @@
 		EEDDF8D7168270A400AD6D0D /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = EEDDF8D5168270A400AD6D0D /* Model.xcdatamodeld */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		AD4644E816B3FA1300839092 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AD93625E1681C29000B4FA9C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AD9362661681C29000B4FA9C;
+			remoteInfo = BSTestArc;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		AD4644A216B3EAC000839092 /* BSManagedDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BSManagedDocument.h; path = ../../BSManagedDocument.h; sourceTree = SOURCE_ROOT; };
 		AD4644A316B3EAC000839092 /* BSManagedDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BSManagedDocument.m; path = ../../BSManagedDocument.m; sourceTree = SOURCE_ROOT; };
 		AD4644AB16B3ECCA00839092 /* Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ebook.h; sourceTree = "<group>"; };
 		AD4644AC16B3ECCA00839092 /* Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Ebook.m; sourceTree = "<group>"; };
+		AD4644B916B3F8EE00839092 /* BSTestArcTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BSTestArcTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AD4644BA16B3F8EE00839092 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		AD4644BF16B3F8EE00839092 /* BSTestArcTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "BSTestArcTests-Info.plist"; sourceTree = "<group>"; };
+		AD4644C116B3F8EE00839092 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		AD4644C316B3F8EE00839092 /* BSTestArcTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BSTestArcTests.h; sourceTree = "<group>"; };
+		AD4644C416B3F8EE00839092 /* BSTestArcTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSTestArcTests.m; sourceTree = "<group>"; };
+		AD4644C616B3F8EE00839092 /* BSTestArcTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BSTestArcTests-Prefix.pch"; sourceTree = "<group>"; };
 		AD6039E716834D8E00B85606 /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		AD6039E816834D8E00B85606 /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
 		AD9362671681C29000B4FA9C /* BSTestArc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTestArc.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -46,6 +67,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		AD4644B516B3F8EE00839092 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD4644BB16B3F8EE00839092 /* SenTestingKit.framework in Frameworks */,
+				AD4644BC16B3F8EE00839092 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AD9362641681C29000B4FA9C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -57,10 +87,31 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AD4644BD16B3F8EE00839092 /* BSTestArcTests */ = {
+			isa = PBXGroup;
+			children = (
+				AD4644C316B3F8EE00839092 /* BSTestArcTests.h */,
+				AD4644C416B3F8EE00839092 /* BSTestArcTests.m */,
+				AD4644BE16B3F8EE00839092 /* Supporting Files */,
+			);
+			path = BSTestArcTests;
+			sourceTree = "<group>";
+		};
+		AD4644BE16B3F8EE00839092 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				AD4644BF16B3F8EE00839092 /* BSTestArcTests-Info.plist */,
+				AD4644C016B3F8EE00839092 /* InfoPlist.strings */,
+				AD4644C616B3F8EE00839092 /* BSTestArcTests-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 		AD93625C1681C29000B4FA9C = {
 			isa = PBXGroup;
 			children = (
 				AD9362711681C29000B4FA9C /* BSTestArc */,
+				AD4644BD16B3F8EE00839092 /* BSTestArcTests */,
 				AD93626A1681C29000B4FA9C /* Frameworks */,
 				AD9362681681C29000B4FA9C /* Products */,
 			);
@@ -70,6 +121,7 @@
 			isa = PBXGroup;
 			children = (
 				AD9362671681C29000B4FA9C /* BSTestArc.app */,
+				AD4644B916B3F8EE00839092 /* BSTestArcTests.octest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -78,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				AD93626B1681C29000B4FA9C /* Cocoa.framework */,
+				AD4644BA16B3F8EE00839092 /* SenTestingKit.framework */,
 				AD93626D1681C29000B4FA9C /* Other Frameworks */,
 			);
 			name = Frameworks;
@@ -145,6 +198,25 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		AD4644B816B3F8EE00839092 /* BSTestArcTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AD4644C716B3F8EE00839092 /* Build configuration list for PBXNativeTarget "BSTestArcTests" */;
+			buildPhases = (
+				AD4644B416B3F8EE00839092 /* Sources */,
+				AD4644B516B3F8EE00839092 /* Frameworks */,
+				AD4644B616B3F8EE00839092 /* Resources */,
+				AD4644B716B3F8EE00839092 /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AD4644E916B3FA1300839092 /* PBXTargetDependency */,
+			);
+			name = BSTestArcTests;
+			productName = BSTestArcTests;
+			productReference = AD4644B916B3F8EE00839092 /* BSTestArcTests.octest */;
+			productType = "com.apple.product-type.bundle";
+		};
 		AD9362661681C29000B4FA9C /* BSTestArc */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AD9362881681C29000B4FA9C /* Build configuration list for PBXNativeTarget "BSTestArc" */;
@@ -184,11 +256,20 @@
 			projectRoot = "";
 			targets = (
 				AD9362661681C29000B4FA9C /* BSTestArc */,
+				AD4644B816B3F8EE00839092 /* BSTestArcTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		AD4644B616B3F8EE00839092 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD4644C216B3F8EE00839092 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AD9362651681C29000B4FA9C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -202,7 +283,31 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		AD4644B716B3F8EE00839092 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		AD4644B416B3F8EE00839092 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD4644C516B3F8EE00839092 /* BSTestArcTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AD9362631681C29000B4FA9C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -218,7 +323,23 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		AD4644E916B3FA1300839092 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AD9362661681C29000B4FA9C /* BSTestArc */;
+			targetProxy = AD4644E816B3FA1300839092 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin PBXVariantGroup section */
+		AD4644C016B3F8EE00839092 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AD4644C116B3F8EE00839092 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
 		AD9362741681C29000B4FA9C /* InfoPlist.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -254,6 +375,32 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		AD4644C816B3F8EE00839092 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "BSTestArcTests/BSTestArcTests-Prefix.pch";
+				INFOPLIST_FILE = "BSTestArcTests/BSTestArcTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Debug;
+		};
+		AD4644C916B3F8EE00839092 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "BSTestArcTests/BSTestArcTests-Prefix.pch";
+				INFOPLIST_FILE = "BSTestArcTests/BSTestArcTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Release;
+		};
 		AD9362861681C29000B4FA9C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -338,6 +485,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		AD4644C716B3F8EE00839092 /* Build configuration list for PBXNativeTarget "BSTestArcTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD4644C816B3F8EE00839092 /* Debug */,
+				AD4644C916B3F8EE00839092 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		AD9362611681C29000B4FA9C /* Build configuration list for PBXProject "BSTestArc" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
