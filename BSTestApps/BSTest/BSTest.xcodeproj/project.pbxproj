@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		AD4644A716B3EAC900839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A616B3EAC900839092 /* BSManagedDocument.m */; };
+		AD4644B316B3ECF200839092 /* Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644B216B3ECF200839092 /* Ebook.m */; };
 		AD9362471681C0DF00B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362451681C0DF00B4FA9C /* InfoPlist.strings */; };
 		AD9362491681C0DF00B4FA9C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362481681C0DF00B4FA9C /* main.m */; };
 		AD93624D1681C0DF00B4FA9C /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = AD93624B1681C0DF00B4FA9C /* Credits.rtf */; };
@@ -15,8 +16,6 @@
 		AD9362531681C0DF00B4FA9C /* Document.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362511681C0DF00B4FA9C /* Document.xib */; };
 		AD9362561681C0DF00B4FA9C /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362541681C0DF00B4FA9C /* MainMenu.xib */; };
 		AD9362A71681CDAA00B4FA9C /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AD9362A51681CDAA00B4FA9C /* Model.xcdatamodeld */; };
-		AD9362CF1681D67100B4FA9C /* Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362CE1681D67100B4FA9C /* Ebook.m */; };
-		AD9362D31681D67900B4FA9C /* _Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362D21681D67900B4FA9C /* _Ebook.m */; };
 		AD9362E71681E3A400B4FA9C /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362E61681E3A300B4FA9C /* WindowController.m */; };
 		AD9362E91682065F00B4FA9C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93623C1681C0DF00B4FA9C /* Cocoa.framework */; };
 /* End PBXBuildFile section */
@@ -24,6 +23,8 @@
 /* Begin PBXFileReference section */
 		AD4644A516B3EAC900839092 /* BSManagedDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BSManagedDocument.h; path = ../../BSManagedDocument.h; sourceTree = SOURCE_ROOT; };
 		AD4644A616B3EAC900839092 /* BSManagedDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BSManagedDocument.m; path = ../../BSManagedDocument.m; sourceTree = SOURCE_ROOT; };
+		AD4644B116B3ECF200839092 /* Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ebook.h; sourceTree = "<group>"; };
+		AD4644B216B3ECF200839092 /* Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Ebook.m; sourceTree = "<group>"; };
 		AD9362381681C0DF00B4FA9C /* BSTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD93623C1681C0DF00B4FA9C /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		AD93623F1681C0DF00B4FA9C /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -39,10 +40,6 @@
 		AD9362521681C0DF00B4FA9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/Document.xib; sourceTree = "<group>"; };
 		AD9362551681C0DF00B4FA9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		AD9362A61681CDAA00B4FA9C /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
-		AD9362CD1681D67100B4FA9C /* Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ebook.h; sourceTree = "<group>"; };
-		AD9362CE1681D67100B4FA9C /* Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Ebook.m; sourceTree = "<group>"; };
-		AD9362D11681D67900B4FA9C /* _Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _Ebook.h; sourceTree = "<group>"; };
-		AD9362D21681D67900B4FA9C /* _Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = _Ebook.m; sourceTree = "<group>"; };
 		AD9362E51681E3A300B4FA9C /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		AD9362E61681E3A300B4FA9C /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
 		AD9362E8168205E200B4FA9C /* BSTest.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = BSTest.entitlements; sourceTree = "<group>"; };
@@ -138,29 +135,11 @@
 		AD9362A41681CCF600B4FA9C /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				AD9362D01681D67900B4FA9C /* Machine */,
-				AD9362CC1681D67100B4FA9C /* Human */,
+				AD4644B116B3ECF200839092 /* Ebook.h */,
+				AD4644B216B3ECF200839092 /* Ebook.m */,
 				AD9362A51681CDAA00B4FA9C /* Model.xcdatamodeld */,
 			);
 			name = Model;
-			sourceTree = "<group>";
-		};
-		AD9362CC1681D67100B4FA9C /* Human */ = {
-			isa = PBXGroup;
-			children = (
-				AD9362CD1681D67100B4FA9C /* Ebook.h */,
-				AD9362CE1681D67100B4FA9C /* Ebook.m */,
-			);
-			path = Human;
-			sourceTree = "<group>";
-		};
-		AD9362D01681D67900B4FA9C /* Machine */ = {
-			isa = PBXGroup;
-			children = (
-				AD9362D11681D67900B4FA9C /* _Ebook.h */,
-				AD9362D21681D67900B4FA9C /* _Ebook.m */,
-			);
-			path = Machine;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -170,7 +149,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AD9362591681C0DF00B4FA9C /* Build configuration list for PBXNativeTarget "BSTest" */;
 			buildPhases = (
-				AD9362CA1681D2E200B4FA9C /* ShellScript */,
 				AD9362341681C0DF00B4FA9C /* Sources */,
 				AD9362351681C0DF00B4FA9C /* Frameworks */,
 				AD9362361681C0DF00B4FA9C /* Resources */,
@@ -224,23 +202,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		AD9362CA1681D2E200B4FA9C /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "cd BSTest\nmogenerator -m ../../Common/Model.xcdatamodeld/Model.xcdatamodel -M Machine/ -H Human/";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		AD9362341681C0DF00B4FA9C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -249,10 +210,9 @@
 				AD9362491681C0DF00B4FA9C /* main.m in Sources */,
 				AD9362501681C0DF00B4FA9C /* Document.m in Sources */,
 				AD9362A71681CDAA00B4FA9C /* Model.xcdatamodeld in Sources */,
-				AD9362CF1681D67100B4FA9C /* Ebook.m in Sources */,
-				AD9362D31681D67900B4FA9C /* _Ebook.m in Sources */,
 				AD9362E71681E3A400B4FA9C /* WindowController.m in Sources */,
 				AD4644A716B3EAC900839092 /* BSManagedDocument.m in Sources */,
+				AD4644B316B3ECF200839092 /* Ebook.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

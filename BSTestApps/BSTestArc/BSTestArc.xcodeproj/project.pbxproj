@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		AD4644A416B3EAC000839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A316B3EAC000839092 /* BSManagedDocument.m */; };
+		AD4644AD16B3ECCA00839092 /* Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644AC16B3ECCA00839092 /* Ebook.m */; };
 		AD6039E916834D8E00B85606 /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD6039E816834D8E00B85606 /* WindowController.m */; };
 		AD93626C1681C29000B4FA9C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93626B1681C29000B4FA9C /* Cocoa.framework */; };
 		AD9362761681C29000B4FA9C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AD9362741681C29000B4FA9C /* InfoPlist.strings */; };
@@ -17,13 +18,13 @@
 		AD9362821681C29000B4FA9C /* Document.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362801681C29000B4FA9C /* Document.xib */; };
 		AD9362851681C29000B4FA9C /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = AD9362831681C29000B4FA9C /* MainMenu.xib */; };
 		EEDDF8D7168270A400AD6D0D /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = EEDDF8D5168270A400AD6D0D /* Model.xcdatamodeld */; };
-		EEDDF8ED1682751400AD6D0D /* Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = EEDDF8EC1682751400AD6D0D /* Ebook.m */; };
-		EEDDF8F11682753500AD6D0D /* _Ebook.m in Sources */ = {isa = PBXBuildFile; fileRef = EEDDF8F01682753500AD6D0D /* _Ebook.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		AD4644A216B3EAC000839092 /* BSManagedDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BSManagedDocument.h; path = ../../BSManagedDocument.h; sourceTree = SOURCE_ROOT; };
 		AD4644A316B3EAC000839092 /* BSManagedDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BSManagedDocument.m; path = ../../BSManagedDocument.m; sourceTree = SOURCE_ROOT; };
+		AD4644AB16B3ECCA00839092 /* Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ebook.h; sourceTree = "<group>"; };
+		AD4644AC16B3ECCA00839092 /* Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Ebook.m; sourceTree = "<group>"; };
 		AD6039E716834D8E00B85606 /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		AD6039E816834D8E00B85606 /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
 		AD9362671681C29000B4FA9C /* BSTestArc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BSTestArc.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -42,10 +43,6 @@
 		AD9362841681C29000B4FA9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		EEDDF8D216826F6F00AD6D0D /* BSTestArc.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = BSTestArc.entitlements; sourceTree = "<group>"; };
 		EEDDF8D6168270A400AD6D0D /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
-		EEDDF8EB1682751400AD6D0D /* Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ebook.h; sourceTree = "<group>"; };
-		EEDDF8EC1682751400AD6D0D /* Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Ebook.m; sourceTree = "<group>"; };
-		EEDDF8EF1682753500AD6D0D /* _Ebook.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _Ebook.h; sourceTree = "<group>"; };
-		EEDDF8F01682753500AD6D0D /* _Ebook.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = _Ebook.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,29 +125,11 @@
 		EEDDF8D41682708B00AD6D0D /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				EEDDF8EE1682753500AD6D0D /* Machine */,
-				EEDDF8EA1682751400AD6D0D /* Human */,
+				AD4644AB16B3ECCA00839092 /* Ebook.h */,
+				AD4644AC16B3ECCA00839092 /* Ebook.m */,
 				EEDDF8D5168270A400AD6D0D /* Model.xcdatamodeld */,
 			);
 			name = Model;
-			sourceTree = "<group>";
-		};
-		EEDDF8EA1682751400AD6D0D /* Human */ = {
-			isa = PBXGroup;
-			children = (
-				EEDDF8EB1682751400AD6D0D /* Ebook.h */,
-				EEDDF8EC1682751400AD6D0D /* Ebook.m */,
-			);
-			path = Human;
-			sourceTree = "<group>";
-		};
-		EEDDF8EE1682753500AD6D0D /* Machine */ = {
-			isa = PBXGroup;
-			children = (
-				EEDDF8EF1682753500AD6D0D /* _Ebook.h */,
-				EEDDF8F01682753500AD6D0D /* _Ebook.m */,
-			);
-			path = Machine;
 			sourceTree = "<group>";
 		};
 		EEDDF8F21682761100AD6D0D /* BSManagedDocument */ = {
@@ -170,7 +149,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AD9362881681C29000B4FA9C /* Build configuration list for PBXNativeTarget "BSTestArc" */;
 			buildPhases = (
-				EEDDF8E91682737D00AD6D0D /* ShellScript */,
 				AD9362631681C29000B4FA9C /* Sources */,
 				AD9362641681C29000B4FA9C /* Frameworks */,
 				AD9362651681C29000B4FA9C /* Resources */,
@@ -224,22 +202,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		EEDDF8E91682737D00AD6D0D /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "cd BSTestArc\nmogenerator --template-var arc=true -m ../../Common/Model.xcdatamodeld/Model.xcdatamodel -M Machine/ -H Human/";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		AD9362631681C29000B4FA9C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -248,10 +210,9 @@
 				AD9362781681C29000B4FA9C /* main.m in Sources */,
 				AD93627F1681C29000B4FA9C /* Document.m in Sources */,
 				EEDDF8D7168270A400AD6D0D /* Model.xcdatamodeld in Sources */,
-				EEDDF8ED1682751400AD6D0D /* Ebook.m in Sources */,
-				EEDDF8F11682753500AD6D0D /* _Ebook.m in Sources */,
 				AD6039E916834D8E00B85606 /* WindowController.m in Sources */,
 				AD4644A416B3EAC000839092 /* BSManagedDocument.m in Sources */,
+				AD4644AD16B3ECCA00839092 /* Ebook.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

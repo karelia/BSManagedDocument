@@ -57,10 +57,9 @@
 
         Document *document = self.document;
 
-        Ebook *ebook = [Ebook insertInManagedObjectContext:document.managedObjectContext];
+        Ebook *ebook = [NSEntityDescription insertNewObjectForEntityForName:@"Ebook" inManagedObjectContext:document.managedObjectContext];
         ebook.contents = fileData;
         ebook.title = fileName;
-        ebook.typeValue = EbookTypeText;
     }];
     
 }
