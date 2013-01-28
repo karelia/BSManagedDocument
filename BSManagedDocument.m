@@ -157,7 +157,7 @@
 	return (_store != nil);
 }
 
-- (BOOL)enableAutomaticMigration { return YES; }
++ (BOOL)requestsAutomaticMigration { return YES; }
 
 - (NSString *)persistentStoreTypeForFileType:(NSString *)fileType { return NSSQLiteStoreType; }
 
@@ -247,7 +247,7 @@
     BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
     
     NSMutableDictionary *options = [NSMutableDictionary dictionaryWithObject:@(readonly) forKey:NSReadOnlyPersistentStoreOption];
-    if ([self enableAutomaticMigration])
+    if ([[self class] requestsAutomaticMigration])
     {
         [options setObject:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
         [options setObject:@YES forKey:NSInferMappingModelAutomaticallyOption];
