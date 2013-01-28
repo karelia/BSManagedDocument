@@ -136,27 +136,12 @@
                                             error:(NSError **)error
 {
 	// On 10.8+, the coordinator whinges but doesn't fail if you leave out this key and the file turns out to be read-only. Supplying a value makes it fail with a (not very helpful) error when the store is read-only
-
-    BOOL optionsModified = NO;
-    NSMutableDictionary *mutableOptions = [NSMutableDictionary dictionaryWithDictionary:storeOptions]; 
-    
     if (![storeOptions objectForKey:NSReadOnlyPersistentStoreOption])
     {
+        NSMutableDictionary *mutableOptions = [NSMutableDictionary dictionaryWithDictionary:storeOptions];
         [mutableOptions setObject:@NO forKey:NSReadOnlyPersistentStoreOption];
-        optionsModified = YES;
-    }
-
-    if ([self enableAutomaticMigration]) {
-        [mutableOptions setObject:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
-        [mutableOptions setObject:@YES forKey:NSInferMappingModelAutomaticallyOption];
-
-        optionsModified = YES;
-    }
-
-    if (optionsModified) {
         storeOptions = mutableOptions;
     }
-    
     
 	NSPersistentStoreCoordinator *storeCoordinator = [[self managedObjectContext] persistentStoreCoordinator];
 	
@@ -261,10 +246,17 @@
     
     BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
     
+    NSMutableDictionary *options = [NSMutableDictionary dictionaryWithObject:@(readonly) forKey:NSReadOnlyPersistentStoreOption];
+    if ([self enableAutomaticMigration])
+    {
+        [options setObject:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
+        [options setObject:@YES forKey:NSInferMappingModelAutomaticallyOption];
+    }
+    
     BOOL result = [self configurePersistentStoreCoordinatorForURL:storeURL
                                                            ofType:typeName
                                                modelConfiguration:nil
-                                                     storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
+                                                     storeOptions:options
                                                             error:outError];
     
     
