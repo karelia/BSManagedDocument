@@ -87,7 +87,7 @@
 /* Whether or not the Automatic Migration is enabled
    Defaults to YES. Subclasses can override this to return NO to disable it.
  */
-- (BOOL)enableAutomaticMigration;
++ (BOOL)requestsAutomaticMigration;
 
 /* Returns the Core Data store type string for the given document fileType. The default returns NSSQLiteStoreType. See NSPersistentStoreCoordinator.h for store type information.
  */
