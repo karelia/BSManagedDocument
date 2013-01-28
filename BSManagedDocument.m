@@ -157,6 +157,8 @@
 	return (_store != nil);
 }
 
++ (BOOL)requestsAutomaticMigration { return YES; }
+
 - (NSString *)persistentStoreTypeForFileType:(NSString *)fileType { return NSSQLiteStoreType; }
 
 - (id)additionalContentForURL:(NSURL *)absoluteURL saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
@@ -244,10 +246,17 @@
     
     BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
     
+    NSMutableDictionary *options = [NSMutableDictionary dictionaryWithObject:@(readonly) forKey:NSReadOnlyPersistentStoreOption];
+    if ([[self class] requestsAutomaticMigration])
+    {
+        [options setObject:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
+        [options setObject:@YES forKey:NSInferMappingModelAutomaticallyOption];
+    }
+    
     BOOL result = [self configurePersistentStoreCoordinatorForURL:storeURL
                                                            ofType:typeName
                                                modelConfiguration:nil
-                                                     storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
+                                                     storeOptions:options
                                                             error:outError];
     
     
