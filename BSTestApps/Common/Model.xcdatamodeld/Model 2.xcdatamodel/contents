@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model name="" userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1811" systemVersion="12C60" minimumToolsVersion="Xcode 4.3" macOSVersion="Automatic" iOSVersion="Automatic">
+    <entity name="Ebook" representedClassName="Ebook" syncable="YES">
+        <attribute name="contents" attributeType="Binary" syncable="YES"/>
+        <attribute name="importDate" attributeType="Date" defaultDateTimeInterval="380894400" syncable="YES"/>
+        <attribute name="title" attributeType="String" syncable="YES"/>
+    </entity>
+    <elements>
+        <element name="Ebook" positionX="160" positionY="192" width="128" height="90"/>
+    </elements>
+</model>
