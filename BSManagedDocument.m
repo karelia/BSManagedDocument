@@ -45,19 +45,19 @@
         __block NSManagedObjectContext *context;
         if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)])
         {
-            context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+            context = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
         }
         else
         {
             // On 10.6, context MUST be created on the thread/queue that's going to use it
             if ([NSThread isMainThread])
             {
-                context = [[NSManagedObjectContext alloc] init];
+                context = [[self.class.managedObjectContextClass alloc] init];
             }
             else
             {
                 dispatch_sync(dispatch_get_main_queue(), ^{
-                    context = [[NSManagedObjectContext alloc] init];
+                    context = [[self.class.managedObjectContextClass alloc] init];
                 });
             }
         }
@@ -80,7 +80,7 @@
     // Need 10.7+ to support parent context
     if ([context respondsToSelector:@selector(setParentContext:)])
     {
-        NSManagedObjectContext *parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+        NSManagedObjectContext *parentContext = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
         
         [parentContext performBlockAndWait:^{
             [parentContext setUndoManager:nil]; // no point in it supporting undo
@@ -112,6 +112,9 @@
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
 }
+
+// Having this method is a bit of a hack for Sandvox's benefit. I intend to remove it in favour of something neater
++ (Class)managedObjectContextClass; { return [NSManagedObjectContext class]; }
 
 - (NSManagedObjectModel *)managedObjectModel;
 {
