@@ -259,54 +259,64 @@
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
 {
-    NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
-    
-    
-    /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
-     */
-    
-    
-    // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
-    NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
-    _additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
-
-    if (!_additionalContent)
-    {
-        NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
-        if (completionHandler) completionHandler(error);
-        return;
-    }
-    
-#if !__has_feature(objc_arc)
-    [_additionalContent retain];
-#endif
-    
-    
-    // Completion handler *has* to run at some point, so extend it to do cleanup for us
-    void (^originalCompletionHandler)(NSError *) = completionHandler;
-	completionHandler = ^(NSError *error) {
+    // Can't touch _additionalContent etc. until existing save has finished
+    [self performActivityWithSynchronousWaiting:YES usingBlock:^(void (^activityCompletionHandler)(void)) {
+        
+        // Completion handler *has* to run at some point, so extend it to do cleanup for us
+        void (^newCompletionHandler)(NSError *) = ^(NSError *error) {
+            activityCompletionHandler();
+            if (completionHandler) completionHandler(error);
+        };
+        
+        
+        NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+        
+        
+        /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
+         */
+        
+        
+        // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
+        NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
+        _additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
+        
+        if (!_additionalContent)
+        {
+            NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
+            newCompletionHandler(error);
+            return;
+        }
         
 #if !__has_feature(objc_arc)
-        [_additionalContent release];
+        [_additionalContent retain];
 #endif
-        _additionalContent = nil;
         
-        if (originalCompletionHandler) originalCompletionHandler(error);
-    };
-    
-    
-    // Save the main context on the main thread before handing off to the background
-    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
-    
-    if ([[self managedObjectContext] save:&error])
-    {
-        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:completionHandler];
-    }
-    else
-    {
-        NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
-        completionHandler(error);
-    }
+        
+        // Extend completion handler for further cleanup
+        newCompletionHandler = ^(NSError *error) {
+            
+#if !__has_feature(objc_arc)
+            [_additionalContent release];
+#endif
+            _additionalContent = nil;
+            
+            newCompletionHandler(error);
+        };
+        
+        
+        // Save the main context on the main thread before handing off to the background
+        NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
+        
+        if ([[self managedObjectContext] save:&error])
+        {
+            [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:newCompletionHandler];
+        }
+        else
+        {
+            NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
+            newCompletionHandler(error);
+        }
+    }];
 }
 
 /*	Regular Save operations can write directly to the existing document since Core Data provides atomicity for us
