@@ -260,11 +260,15 @@
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
 {
     // Can't touch _additionalContent etc. until existing save has finished
-    [self performActivityWithSynchronousWaiting:YES usingBlock:^(void (^activityCompletionHandler)(void)) {
+    // At first glance, -performActivityWithSynchronousWaiting:usingBlock: seems the right way to do that. But turns out:
+    //  * super is documented to use -performAsynchronousFileAccessUsingBlock: internally
+    //  * Autosaving (as tested on 10.7) is declared to the system as *file access*, rather than an *activity*, so a regular save won't block the UI waiting for autosave to finish
+    //  * If autosaving while quitting, calling -performActivity… here resuls in deadlock
+    [self performAsynchronousFileAccessUsingBlock:^(void (^fileAccessCompletionHandler)(void)) {
         
         // Completion handler *has* to run at some point, so extend it to do cleanup for us
         void (^newCompletionHandler)(NSError *) = ^(NSError *error) {
-            activityCompletionHandler();
+            fileAccessCompletionHandler();
             if (completionHandler) completionHandler(error);
         };
         
