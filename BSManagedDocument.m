@@ -525,16 +525,17 @@ originalContentsURL:(NSURL *)originalContentsURL
 #endif
 
             _store = migrated;
-            
-            return [self writeAdditionalContent:_additionalContent
-                                          toURL:inURL
-                            originalContentsURL:originalContentsURL
-                                          error:error];
         }
         @finally
         {
             [coordinator unlock];
         }
+        
+        // MUST happen after unlocking the coordinator otherwise a subclass might try to access the context/coordinator resulting in deadlock
+        return [self writeAdditionalContent:_additionalContent
+                                      toURL:inURL
+                        originalContentsURL:originalContentsURL
+                                      error:error];
     }
     else if (saveOp != NSSaveOperation && saveOp != NSAutosaveInPlaceOperation)
     {
