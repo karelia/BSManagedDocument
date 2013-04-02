@@ -699,20 +699,6 @@ originalContentsURL:(NSURL *)originalContentsURL
 + (BOOL)autosavesInPlace { return [NSDocument respondsToSelector:_cmd]; }
 + (BOOL)preservesVersions { return [self autosavesInPlace]; }
 
-- (BOOL)saveToURL:(NSURL *)absoluteURL ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError * __autoreleasing*)outError
-{
-    if (_managedObjectContext) {
-        NSError* mainContextError = nil;
-        if(![_managedObjectContext save:&mainContextError]) {
-            if (outError) {
-                *outError = mainContextError;
-            }
-            return NO;
-        }
-    }
-    return [super saveToURL:absoluteURL ofType:typeName forSaveOperation:saveOperation error:outError];
-}
-
 - (void)setAutosavedContentsFileURL:(NSURL *)absoluteURL;
 {
     [super setAutosavedContentsFileURL:absoluteURL];
