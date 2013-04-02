@@ -722,7 +722,9 @@ originalContentsURL:(NSURL *)originalContentsURL
 
 - (BOOL)revertToContentsOfURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)outError;
 {
-    // Tear down old windows
+    // Tear down old windows. Wrap in an autorelease pool to get us much torn down before the reversion as we can
+    @autoreleasepool
+    {
     NSArray *controllers = [[self windowControllers] copy]; // we're sometimes handed underlying mutable array. #156271
     for (NSWindowController *aController in controllers)
     {
@@ -732,6 +734,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 #if ! __has_feature(objc_arc)
     [controllers release];
 #endif
+    }
 
 
     @try
