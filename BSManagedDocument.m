@@ -216,9 +216,27 @@
         // NSPersistentDocument states: "Revert resets the document’s managed object context. Objects are subsequently loaded from the persistent store on demand, as with opening a new document."
         // I've found for atomic stores that -reset only rolls back to the last loaded or saved version of the store; NOT what's actually on disk
         // To force it to re-read from disk, the only solution I've found is removing and re-adding the persistent store
-        if (![[[self managedObjectContext] persistentStoreCoordinator] removePersistentStore:_store error:outError])
+        NSManagedObjectContext *context = self.managedObjectContext;
+        if ([context respondsToSelector:@selector(parentContext)])
         {
-            return NO;
+            // In my testing, HAVE to do the removal using parent's private queue. Otherwise, it deadlocks, trying to acquire a _PFLock
+            NSManagedObjectContext *parent = context.parentContext;
+            while (parent)
+            {
+                context = parent;   parent = context.parentContext;
+            }
+            
+            __block BOOL result;
+            [context performBlockAndWait:^{
+                result = [context.persistentStoreCoordinator removePersistentStore:_store error:outError];
+            }];
+        }
+        else
+        {
+            if (![context.persistentStoreCoordinator removePersistentStore:_store error:outError])
+            {
+                return NO;
+            }
         }
 
 #if !__has_feature(objc_arc)
