@@ -520,9 +520,17 @@ originalContentsURL:(NSURL *)originalContentsURL
     }
     else if (saveOp == NSSaveAsOperation)
     {
-        /* Save As for an existing store is special. Migrates the store instead of saving
-         */
-        
+        /*  Save As for an existing store should be special, migrating the store instead of saving
+            However, in our testing it can cause the next save to blow up if you go:
+         
+         1. New doc
+         2. Autosave
+         3. Save (As)
+         4. Save
+         
+         The last step will throw an exception claiming "Object's persistent store is not reachable from this NSManagedObjectContext's coordinator".
+         
+         
         NSPersistentStoreCoordinator *coordinator = [_store persistentStoreCoordinator];
         
         [coordinator lock]; // so it knows it's in use
@@ -547,6 +555,11 @@ originalContentsURL:(NSURL *)originalContentsURL
         {
             [coordinator unlock];
         }
+         */
+        
+        // Instead, we shall fallback to copying the store to the new location and writing over that
+        if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
+        [_store.persistentStoreCoordinator setURL:storeURL forPersistentStore:_store];
     }
     else if (saveOp != NSSaveOperation && saveOp != NSAutosaveInPlaceOperation)
     {
