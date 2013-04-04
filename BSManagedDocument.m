@@ -523,8 +523,6 @@ originalContentsURL:(NSURL *)originalContentsURL
         /* Save As for an existing store is special. Migrates the store instead of saving
          */
         
-        if (![self updateMetadataForPersistentStore:_store error:error]) return NO;
-        
         NSPersistentStoreCoordinator *coordinator = [_store persistentStoreCoordinator];
         
         [coordinator lock]; // so it knows it's in use
