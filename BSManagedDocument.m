@@ -557,9 +557,9 @@ originalContentsURL:(NSURL *)originalContentsURL
         }
          */
         
-        // Instead, we shall fallback to copying the store to the new location and writing over that
+        // Instead, we shall fallback to copying the store to the new location
+        // -writeStoreContent… routine will adjust store URL for us
         if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
-        [_store.persistentStoreCoordinator setURL:storeURL forPersistentStore:_store];
     }
     else if (saveOp != NSSaveOperation && saveOp != NSAutosaveInPlaceOperation)
     {
@@ -568,9 +568,6 @@ originalContentsURL:(NSURL *)originalContentsURL
         {
             if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
         }
-        
-        // Make sure existing store is saving to right place
-        [[_store persistentStoreCoordinator] setURL:storeURL forPersistentStore:_store];
     }
     
     
@@ -672,18 +669,22 @@ originalContentsURL:(NSURL *)originalContentsURL
     //NSNumber *writable;
     //result = [URL getResourceValue:&writable forKey:NSURLIsWritableKey error:&error];
     
-    BOOL result = [[NSFileManager defaultManager] isWritableFileAtPath:[storeURL path]];
-    if (result)
+    if ([[NSFileManager defaultManager] isWritableFileAtPath:[storeURL path]])
     {
-        result = [context save:error];
+        // Ensure store is saving to right location
+        if ([context.persistentStoreCoordinator setURL:storeURL forPersistentStore:_store])
+        {
+            return [context save:error];
+        }
     }
-    else if (error)
+    
+    if (error)
     {
         // Generic error. Doc/error system takes care of supplying a nice generic message to go with it
         *error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileWriteNoPermissionError userInfo:nil];
     }
     
-    return result;
+    return NO;
 }
 
 #pragma mark NSDocument
