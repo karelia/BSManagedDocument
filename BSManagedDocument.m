@@ -295,7 +295,153 @@
         if (![context save:outError]) additionalContent = nil;
     }
     
-    return additionalContent;   // use additional content as the full contents for now
+    
+    // What we consider to be "contents" is actually a worker block
+    BOOL (^contents)(NSURL *, NSURL *, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+        
+        // For the first save of a document, create the folders on disk before we do anything else
+        BOOL result = YES;
+        if (saveOperation == NSSaveAsOperation ||
+            (saveOperation == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:url]))
+        {
+            NSDictionary *attributes = [self fileAttributesToWriteToURL:url
+                                                                 ofType:typeName
+                                                       forSaveOperation:saveOperation
+                                                    originalContentsURL:originalContentsURL
+                                                                  error:error];
+            
+            if (!attributes) return NO;
+            
+            result = [[NSFileManager defaultManager] createDirectoryAtPath:[url path]
+                                               withIntermediateDirectories:NO
+                                                                attributes:attributes
+                                                                     error:error];
+            
+            if (result)
+            {
+                // Create store content folder too
+                NSString *storeContent = [[self class] storeContentName];
+                if (storeContent)
+                {
+                    NSURL *storeContentURL = [url URLByAppendingPathComponent:storeContent];
+                    
+                    result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
+                                                       withIntermediateDirectories:NO
+                                                                        attributes:attributes
+                                                                             error:error];
+                }
+            }
+            
+            // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
+            if (result) [self setBundleBitForDirectoryAtURL:url];
+        }
+        
+        
+        
+        NSURL *storeURL = [self.class persistentStoreURLForDocumentURL:url];
+        
+        // Setup persistent store appropriately
+        if (!_store)
+        {
+            if (![self configurePersistentStoreCoordinatorForURL:storeURL
+                                                          ofType:typeName
+                                              modelConfiguration:nil
+                                                    storeOptions:nil
+                                                           error:error])
+            {
+                return NO;
+            }
+        }
+        else if (saveOperation == NSSaveAsOperation)
+        {
+            /*  Save As for an existing store should be special, migrating the store instead of saving
+             However, in our testing it can cause the next save to blow up if you go:
+             
+             1. New doc
+             2. Autosave
+             3. Save (As)
+             4. Save
+             
+             The last step will throw an exception claiming "Object's persistent store is not reachable from this NSManagedObjectContext's coordinator".
+             
+             
+             NSPersistentStoreCoordinator *coordinator = [_store persistentStoreCoordinator];
+             
+             [coordinator lock]; // so it knows it's in use
+             @try
+             {
+             NSPersistentStore *migrated = [coordinator migratePersistentStore:_store
+             toURL:storeURL
+             options:nil
+             withType:[self persistentStoreTypeForFileType:typeName]
+             error:error];
+             
+             if (!migrated) return NO;
+             
+             #if ! __has_feature(objc_arc)
+             [migrated retain];
+             [_store release];
+             #endif
+             
+             _store = migrated;
+             }
+             @finally
+             {
+             [coordinator unlock];
+             }
+             */
+            
+            // Instead, we shall fallback to copying the store to the new location
+            // -writeStoreContent… routine will adjust store URL for us
+            if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
+        }
+        else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation)
+        {
+            // Fake a placeholder file ready for the store to save over
+            if (![storeURL checkResourceIsReachableAndReturnError:NULL])
+            {
+                if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
+            }
+        }
+        
+        
+        // Right, let's get on with it!
+        result = [self writeStoreContentToURL:storeURL error:error];
+        if (!result) return NO;
+        
+        if (result)
+        {
+            result = [self writeAdditionalContent:additionalContent toURL:url originalContentsURL:originalContentsURL error:error];
+            
+            if (result)
+            {
+                // Update package's mod date. Two circumstances where this is needed:
+                //  user requests a save when there's no changes; SQLite store doesn't bother to touch the disk in which case
+                //  saving where +storeContentName is non-nil; that folder's mod date updates, but the overall package needs prompting
+                // Seems simplest to just apply this logic all the time
+                NSError *error;
+                if (![url setResourceValue:[NSDate date] forKey:NSURLContentModificationDateKey error:&error])
+                {
+                    NSLog(@"Updating package mod date failed: %@", error);  // not critical, so just log it
+                }
+            }
+        }
+        
+        
+        // Restore persistent store URL after Save To-type operations. Even if save failed (just to be on the safe side)
+        if (saveOperation == NSSaveToOperation)
+        {
+            if (![[_store persistentStoreCoordinator] setURL:originalContentsURL forPersistentStore:_store])
+            {
+                NSLog(@"Failed to reset store URL after Save To Operation");
+            }
+        }
+        
+        
+        return result;
+    };
+    
+    return [[contents copy] autorelease];
 }
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
@@ -450,146 +596,9 @@ originalContentsURL:(NSURL *)originalContentsURL
     }
     
     
-    // For the first save of a document, create the folders on disk before we do anything else
-    BOOL result = YES;
-    if (saveOp == NSSaveAsOperation ||
-        (saveOp == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:inURL]))
-    {
-        NSDictionary *attributes = [self fileAttributesToWriteToURL:inURL
-                                                             ofType:typeName
-                                                   forSaveOperation:saveOp
-                                                originalContentsURL:originalContentsURL
-                                                              error:error];
-        
-        if (!attributes) return NO;
-        
-        result = [[NSFileManager defaultManager] createDirectoryAtPath:[inURL path]
-                                           withIntermediateDirectories:NO
-                                                            attributes:attributes
-                                                                 error:error];
-        
-        if (result)
-        {
-            // Create store content folder too
-            NSString *storeContent = [[self class] storeContentName];
-            if (storeContent)
-            {
-                NSURL *storeContentURL = [inURL URLByAppendingPathComponent:storeContent];
-                
-                result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
-                                                   withIntermediateDirectories:NO
-                                                                    attributes:attributes
-                                                                         error:error];
-            }
-        }
-        
-        // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
-        if (result) [self setBundleBitForDirectoryAtURL:inURL];
-    }
-    
-    
-    
-    NSURL *storeURL = [[self class] persistentStoreURLForDocumentURL:inURL];
-    
-    // Setup persistent store appropriately
-    if (!_store)
-    {
-        if (![self configurePersistentStoreCoordinatorForURL:storeURL
-                                                      ofType:typeName
-                                          modelConfiguration:nil
-                                                storeOptions:nil
-                                                       error:error])
-        {
-            return NO;
-        }
-    }
-    else if (saveOp == NSSaveAsOperation)
-    {
-        /*  Save As for an existing store should be special, migrating the store instead of saving
-            However, in our testing it can cause the next save to blow up if you go:
-         
-         1. New doc
-         2. Autosave
-         3. Save (As)
-         4. Save
-         
-         The last step will throw an exception claiming "Object's persistent store is not reachable from this NSManagedObjectContext's coordinator".
-         
-         
-        NSPersistentStoreCoordinator *coordinator = [_store persistentStoreCoordinator];
-        
-        [coordinator lock]; // so it knows it's in use
-        @try
-        {
-            NSPersistentStore *migrated = [coordinator migratePersistentStore:_store
-                                                                        toURL:storeURL
-                                                                      options:nil
-                                                                     withType:[self persistentStoreTypeForFileType:typeName]
-                                                                        error:error];
-            
-            if (!migrated) return NO;
-            
-#if ! __has_feature(objc_arc)
-            [migrated retain];
-            [_store release];
-#endif
-
-            _store = migrated;
-        }
-        @finally
-        {
-            [coordinator unlock];
-        }
-         */
-        
-        // Instead, we shall fallback to copying the store to the new location
-        // -writeStoreContent… routine will adjust store URL for us
-        if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
-    }
-    else if (saveOp != NSSaveOperation && saveOp != NSAutosaveInPlaceOperation)
-    {
-        // Fake a placeholder file ready for the store to save over
-        if (![storeURL checkResourceIsReachableAndReturnError:NULL])
-        {
-            if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
-        }
-    }
-    
-    
-    // Right, let's get on with it!
-    result = [self writeStoreContentToURL:storeURL error:error];
-    if (!result) return NO;
-    
-    if (result)
-    {
-        result = [self writeAdditionalContent:_contents toURL:inURL originalContentsURL:originalContentsURL error:error];
-        
-        if (result)
-        {
-            // Update package's mod date. Two circumstances where this is needed:
-            //  user requests a save when there's no changes; SQLite store doesn't bother to touch the disk in which case
-            //  saving where +storeContentName is non-nil; that folder's mod date updates, but the overall package needs prompting
-            // Seems simplest to just apply this logic all the time
-            NSError *error;
-            if (![inURL setResourceValue:[NSDate date] forKey:NSURLContentModificationDateKey error:&error])
-            {
-                NSLog(@"Updating package mod date failed: %@", error);  // not critical, so just log it
-            }
-        }
-    }
-    
-    
-    // Restore persistent store URL after Save To-type operations. Even if save failed (just to be on the safe side)
-    if (saveOp == NSSaveToOperation)
-    {
-        if (![[_store persistentStoreCoordinator] setURL:originalContentsURL forPersistentStore:_store])
-        {
-            NSLog(@"Failed to reset store URL after Save To Operation");
-        }
-    }
-    
-    
-    return result;
+    // We implement contents as a block which is called to perform the writing
+    BOOL (^contentsBlock)(NSURL *, NSURL *, NSError**) = _contents;
+    return contentsBlock(inURL, originalContentsURL, error);
 }
 
 - (void)setBundleBitForDirectoryAtURL:(NSURL *)url;
