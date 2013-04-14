@@ -196,7 +196,7 @@
 }
 #endif
 
-#pragma mark Reading From and Writing to URLs
+#pragma mark Reading Document Data
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)outError
 {
@@ -274,6 +274,8 @@
     
     return result;
 }
+
+#pragma mark Writing Document Data
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
 {
