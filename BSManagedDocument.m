@@ -578,6 +578,19 @@ originalContentsURL:(NSURL *)originalContentsURL
     if (result)
     {
         result = [self writeAdditionalContent:_additionalContent toURL:inURL originalContentsURL:originalContentsURL error:error];
+        
+        if (result)
+        {
+            // Update package's mod date. Two circumstances where this is needed:
+            //  user requests a save when there's no changes; SQLite store doesn't bother to touch the disk in which case
+            //  saving where +storeContentName is non-nil; that folder's mod date updates, but the overall package needs prompting
+            // Seems simplest to just apply this logic all the time
+            NSError *error;
+            if (![inURL setResourceValue:[NSDate date] forKey:NSURLContentModificationDateKey error:&error])
+            {
+                NSLog(@"Updating package mod date failed: %@", error);  // not critical, so just log it
+            }
+        }
     }
     
     
