@@ -431,37 +431,35 @@ originalContentsURL:(NSURL *)originalContentsURL
     // To have gotten here on any thread but the main one is a programming error and unworkable, so we throw an exception
     if (!_additionalContent)
     {
-		if ([NSThread isMainThread])
+		if (![NSThread isMainThread])
         {
-            _additionalContent = [self additionalContentForURL:inURL saveOperation:saveOp error:error];
-            if (!_additionalContent) return NO;
-            
-            // Worried that _additionalContent hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
-            
-            // On 10.7+, save the main context, ready for parent to be saved in a moment
-            NSManagedObjectContext *context = [self managedObjectContext];
-            if ([context respondsToSelector:@selector(parentContext)])
+            [NSException raise:NSInvalidArgumentException
+                        format:@"Attempt to write document on background thread, bypassing usual save methods"];
+        }
+        
+        _additionalContent = [self additionalContentForURL:inURL saveOperation:saveOp error:error];
+        if (!_additionalContent) return NO;
+        
+        // Worried that _additionalContent hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
+        
+        // On 10.7+, save the main context, ready for parent to be saved in a moment
+        NSManagedObjectContext *context = [self managedObjectContext];
+        if ([context respondsToSelector:@selector(parentContext)])
+        {
+            if (![context save:error])
             {
-                if (![context save:error])
-                {
-                    _additionalContent = nil;
-                    return NO;
-                }
+                _additionalContent = nil;
+                return NO;
             }
-            
-            // And now we're ready to write for real
-            BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
-            
-            
-            // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
-            _additionalContent = nil;
-            return result;
         }
-        else
-        {
-            [NSException raise:NSInvalidArgumentException format:@"Attempt to write document on background thread, bypassing usual save methods"];
-            return NO;
-        }
+        
+        // And now we're ready to write for real
+        BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
+        
+        
+        // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
+        _additionalContent = nil;
+        return result;
     }
     
     
