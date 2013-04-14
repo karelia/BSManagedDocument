@@ -791,7 +791,19 @@ originalContentsURL:(NSURL *)originalContentsURL
 
 - (NSDocument *)duplicateAndReturnError:(NSError **)outError;
 {
+    // If the doc is brand new, have to force the autosave to write to disk
+    if (!self.fileURL && !self.autosavedContentsFileURL && !self.hasUnautosavedChanges)
+    {
+        [self updateChangeCount:NSChangeDone];
+        NSDocument *result = [self duplicateAndReturnError:outError];
+        [self updateChangeCount:NSChangeUndone];
+        return result;
+    }
+    
+    
+    // Make sure copy on disk is up-to-date
     if (![self fakeSynchronousAutosaveAndReturnError:outError]) return nil;
+    
     
     // Let super handle the overall duplication so it gets the window-handling
     // right. But use custom writing logic that actually copies the existing doc
