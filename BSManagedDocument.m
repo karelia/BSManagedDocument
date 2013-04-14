@@ -566,7 +566,9 @@
 
 - (BOOL)writeBackupToURL:(NSURL *)backupURL error:(NSError **)outError;
 {
-	return [[NSFileManager defaultManager] copyItemAtURL:[self fileURL] toURL:backupURL error:outError];
+    NSURL *source = self.fileURL;
+    if (!source) source = self.autosavedContentsFileURL;
+	return [[NSFileManager defaultManager] copyItemAtURL:source toURL:backupURL error:outError];
 }
 
 - (BOOL)writeToURL:(NSURL *)inURL
