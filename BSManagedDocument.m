@@ -277,6 +277,27 @@
 
 #pragma mark Writing Document Data
 
+- (id)contentsForURL:(NSURL *)url ofType:(NSString *)typeName saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)outError;
+{
+    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
+    
+    
+    // Grab additional content that a subclass might provide
+    NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
+    id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
+    if (!additionalContent) return nil;
+    
+    
+    // On 10.7+, save the main context, ready for parent to be saved in a moment
+    NSManagedObjectContext *context = self.managedObjectContext;
+    if ([context respondsToSelector:@selector(parentContext)])
+    {
+        if (![context save:outError]) additionalContent = nil;
+    }
+    
+    return additionalContent;   // use additional content as the full contents for now
+}
+
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
 {
     // Can't touch _additionalContent etc. until existing save has finished
@@ -293,7 +314,7 @@
         };
         
         
-        NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+        NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
         
         
         /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
@@ -301,10 +322,10 @@
         
         
         // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
-        NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
-        _additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
+        NSError *error;
+        _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
         
-        if (!_additionalContent)
+        if (!_contents)
         {
             NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
             newCompletionHandler(error);
@@ -312,34 +333,21 @@
         }
         
 #if !__has_feature(objc_arc)
-        [_additionalContent retain];
+        [_contents retain];
 #endif
         
         
-        // Extend completion handler for further cleanup
-        newCompletionHandler = ^(NSError *error) {
+        // Kick off async saving work
+        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
             
+            // Cleanup
 #if !__has_feature(objc_arc)
-            [_additionalContent release];
+            [_contents release];
 #endif
-            _additionalContent = nil;
+            _contents = nil;
             
             newCompletionHandler(error);
-        };
-        
-        
-        // Save the main context on the main thread before handing off to the background
-        NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
-        
-        if ([[self managedObjectContext] save:&error])
-        {
-            [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:newCompletionHandler];
-        }
-        else
-        {
-            NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
-            newCompletionHandler(error);
-        }
+        }];
     }];
 }
 
@@ -431,36 +439,20 @@ originalContentsURL:(NSURL *)originalContentsURL
     // Grab additional content before proceeding. This should *only* happen when writing entirely on the main thread
     // (e.g. Using one of the old synchronous -save… APIs. Note: duplicating a document calls -writeSafely… directly)
     // To have gotten here on any thread but the main one is a programming error and unworkable, so we throw an exception
-    if (!_additionalContent)
+    if (!_contents)
     {
-		if (![NSThread isMainThread])
-        {
-            [NSException raise:NSInvalidArgumentException
-                        format:@"Attempt to write document on background thread, bypassing usual save methods"];
-        }
+		_contents = [self contentsForURL:inURL ofType:typeName saveOperation:saveOp error:error];
+        if (!_contents) return NO;
         
-        _additionalContent = [self additionalContentForURL:inURL saveOperation:saveOp error:error];
-        if (!_additionalContent) return NO;
+        // Worried that _contents hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
         
-        // Worried that _additionalContent hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
-        
-        // On 10.7+, save the main context, ready for parent to be saved in a moment
-        NSManagedObjectContext *context = [self managedObjectContext];
-        if ([context respondsToSelector:@selector(parentContext)])
-        {
-            if (![context save:error])
-            {
-                _additionalContent = nil;
-                return NO;
-            }
-        }
         
         // And now we're ready to write for real
         BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
         
         
         // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
-        _additionalContent = nil;
+        _contents = nil;
         return result;
     }
     
@@ -577,7 +569,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     if (result)
     {
-        result = [self writeAdditionalContent:_additionalContent toURL:inURL originalContentsURL:originalContentsURL error:error];
+        result = [self writeAdditionalContent:_contents toURL:inURL originalContentsURL:originalContentsURL error:error];
         
         if (result)
         {
