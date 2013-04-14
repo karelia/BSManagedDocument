@@ -45,19 +45,19 @@
         __block NSManagedObjectContext *context;
         if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)])
         {
-            context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+            context = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
         }
         else
         {
             // On 10.6, context MUST be created on the thread/queue that's going to use it
             if ([NSThread isMainThread])
             {
-                context = [[NSManagedObjectContext alloc] init];
+                context = [[self.class.managedObjectContextClass alloc] init];
             }
             else
             {
                 dispatch_sync(dispatch_get_main_queue(), ^{
-                    context = [[NSManagedObjectContext alloc] init];
+                    context = [[self.class.managedObjectContextClass alloc] init];
                 });
             }
         }
@@ -80,7 +80,7 @@
     // Need 10.7+ to support parent context
     if ([context respondsToSelector:@selector(setParentContext:)])
     {
-        NSManagedObjectContext *parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+        NSManagedObjectContext *parentContext = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
         
         [parentContext performBlockAndWait:^{
             [parentContext setUndoManager:nil]; // no point in it supporting undo
@@ -112,6 +112,9 @@
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
 }
+
+// Having this method is a bit of a hack for Sandvox's benefit. I intend to remove it in favour of something neater
++ (Class)managedObjectContextClass; { return [NSManagedObjectContext class]; }
 
 - (NSManagedObjectModel *)managedObjectModel;
 {
@@ -215,9 +218,27 @@
         // NSPersistentDocument states: "Revert resets the document’s managed object context. Objects are subsequently loaded from the persistent store on demand, as with opening a new document."
         // I've found for atomic stores that -reset only rolls back to the last loaded or saved version of the store; NOT what's actually on disk
         // To force it to re-read from disk, the only solution I've found is removing and re-adding the persistent store
-        if (![[[self managedObjectContext] persistentStoreCoordinator] removePersistentStore:_store error:outError])
+        NSManagedObjectContext *context = self.managedObjectContext;
+        if ([context respondsToSelector:@selector(parentContext)])
         {
-            return NO;
+            // In my testing, HAVE to do the removal using parent's private queue. Otherwise, it deadlocks, trying to acquire a _PFLock
+            NSManagedObjectContext *parent = context.parentContext;
+            while (parent)
+            {
+                context = parent;   parent = context.parentContext;
+            }
+            
+            __block BOOL result;
+            [context performBlockAndWait:^{
+                result = [context.persistentStoreCoordinator removePersistentStore:_store error:outError];
+            }];
+        }
+        else
+        {
+            if (![context.persistentStoreCoordinator removePersistentStore:_store error:outError])
+            {
+                return NO;
+            }
         }
 
 #if !__has_feature(objc_arc)
@@ -265,54 +286,68 @@
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
 {
-    NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
-    
-    
-    /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
-     */
-    
-    
-    // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
-    NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
-    _additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
-
-    if (!_additionalContent)
-    {
-        NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
-        if (completionHandler) completionHandler(error);
-        return;
-    }
-    
-#if !__has_feature(objc_arc)
-    [_additionalContent retain];
-#endif
-    
-    
-    // Completion handler *has* to run at some point, so extend it to do cleanup for us
-    void (^originalCompletionHandler)(NSError *) = completionHandler;
-	completionHandler = ^(NSError *error) {
+    // Can't touch _additionalContent etc. until existing save has finished
+    // At first glance, -performActivityWithSynchronousWaiting:usingBlock: seems the right way to do that. But turns out:
+    //  * super is documented to use -performAsynchronousFileAccessUsingBlock: internally
+    //  * Autosaving (as tested on 10.7) is declared to the system as *file access*, rather than an *activity*, so a regular save won't block the UI waiting for autosave to finish
+    //  * If autosaving while quitting, calling -performActivity… here resuls in deadlock
+    [self performAsynchronousFileAccessUsingBlock:^(void (^fileAccessCompletionHandler)(void)) {
+        
+        // Completion handler *has* to run at some point, so extend it to do cleanup for us
+        void (^newCompletionHandler)(NSError *) = ^(NSError *error) {
+            fileAccessCompletionHandler();
+            if (completionHandler) completionHandler(error);
+        };
+        
+        
+        NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+        
+        
+        /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
+         */
+        
+        
+        // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
+        NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
+        _additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
+        
+        if (!_additionalContent)
+        {
+            NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
+            newCompletionHandler(error);
+            return;
+        }
         
 #if !__has_feature(objc_arc)
-        [_additionalContent release];
+        [_additionalContent retain];
 #endif
-        _additionalContent = nil;
         
-        if (originalCompletionHandler) originalCompletionHandler(error);
-    };
-    
-    
-    // Save the main context on the main thread before handing off to the background
-    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
-    
-    if ([[self managedObjectContext] save:&error])
-    {
-        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:completionHandler];
-    }
-    else
-    {
-        NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
-        completionHandler(error);
-    }
+        
+        // Extend completion handler for further cleanup
+        newCompletionHandler = ^(NSError *error) {
+            
+#if !__has_feature(objc_arc)
+            [_additionalContent release];
+#endif
+            _additionalContent = nil;
+            
+            newCompletionHandler(error);
+        };
+        
+        
+        // Save the main context on the main thread before handing off to the background
+        NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
+        
+        if ([[self managedObjectContext] save:&error])
+        {
+            [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:newCompletionHandler];
+        }
+        else
+        {
+            NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
+            newCompletionHandler(error);
+        }
+    }];
 }
 
 /*	Regular Save operations can write directly to the existing document since Core Data provides atomicity for us
@@ -400,11 +435,12 @@
 originalContentsURL:(NSURL *)originalContentsURL
              error:(NSError **)error
 {
-    // Can't write on worker thread if caller somehow bypassed additional content & saving main context
+    // Grab additional content before proceeding. This should *only* happen when writing entirely on the main thread
+    // (e.g. Using one of the old synchronous -save… APIs. Note: duplicating a document calls -writeSafely… directly)
+    // To have gotten here on any thread but the main one is a programming error and unworkable, so we throw an exception
     if (!_additionalContent)
     {
-		// For example, duplicating a document calls -writeSafely… directly. Also, using the old synchronous saving APIs bring you to this point
-        if ([NSThread isMainThread])
+		if ([NSThread isMainThread])
         {
             _additionalContent = [self additionalContentForURL:inURL saveOperation:saveOp error:error];
             if (!_additionalContent) return NO;
@@ -493,11 +529,17 @@ originalContentsURL:(NSURL *)originalContentsURL
     }
     else if (saveOp == NSSaveAsOperation)
     {
-        /* Save As for an existing store is special. Migrates the store instead of saving
-         */
-        
-        if (![self updateMetadataForPersistentStore:_store error:error]) return NO;
-        
+        /*  Save As for an existing store should be special, migrating the store instead of saving
+            However, in our testing it can cause the next save to blow up if you go:
+         
+         1. New doc
+         2. Autosave
+         3. Save (As)
+         4. Save
+         
+         The last step will throw an exception claiming "Object's persistent store is not reachable from this NSManagedObjectContext's coordinator".
+         
+         
         NSPersistentStoreCoordinator *coordinator = [_store persistentStoreCoordinator];
         
         [coordinator lock]; // so it knows it's in use
@@ -517,16 +559,16 @@ originalContentsURL:(NSURL *)originalContentsURL
 #endif
 
             _store = migrated;
-            
-            return [self writeAdditionalContent:_additionalContent
-                                          toURL:inURL
-                            originalContentsURL:originalContentsURL
-                                          error:error];
         }
         @finally
         {
             [coordinator unlock];
         }
+         */
+        
+        // Instead, we shall fallback to copying the store to the new location
+        // -writeStoreContent… routine will adjust store URL for us
+        if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
     }
     else if (saveOp != NSSaveOperation && saveOp != NSAutosaveInPlaceOperation)
     {
@@ -535,9 +577,6 @@ originalContentsURL:(NSURL *)originalContentsURL
         {
             if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
         }
-        
-        // Make sure existing store is saving to right place
-        [[_store persistentStoreCoordinator] setURL:storeURL forPersistentStore:_store];
     }
     
     
@@ -639,18 +678,22 @@ originalContentsURL:(NSURL *)originalContentsURL
     //NSNumber *writable;
     //result = [URL getResourceValue:&writable forKey:NSURLIsWritableKey error:&error];
     
-    BOOL result = [[NSFileManager defaultManager] isWritableFileAtPath:[storeURL path]];
-    if (result)
+    if ([[NSFileManager defaultManager] isWritableFileAtPath:[storeURL path]])
     {
-        result = [context save:error];
+        // Ensure store is saving to right location
+        if ([context.persistentStoreCoordinator setURL:storeURL forPersistentStore:_store])
+        {
+            return [context save:error];
+        }
     }
-    else if (error)
+    
+    if (error)
     {
         // Generic error. Doc/error system takes care of supplying a nice generic message to go with it
         *error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileWriteNoPermissionError userInfo:nil];
     }
     
-    return result;
+    return NO;
 }
 
 #pragma mark NSDocument
@@ -696,20 +739,6 @@ originalContentsURL:(NSURL *)originalContentsURL
 + (BOOL)autosavesInPlace { return [NSDocument respondsToSelector:_cmd]; }
 + (BOOL)preservesVersions { return [self autosavesInPlace]; }
 
-- (BOOL)saveToURL:(NSURL *)absoluteURL ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError * __autoreleasing*)outError
-{
-    if (_managedObjectContext) {
-        NSError* mainContextError = nil;
-        if(![_managedObjectContext save:&mainContextError]) {
-            if (outError) {
-                *outError = mainContextError;
-            }
-            return NO;
-        }
-    }
-    return [super saveToURL:absoluteURL ofType:typeName forSaveOperation:saveOperation error:outError];
-}
-
 - (void)setAutosavedContentsFileURL:(NSURL *)absoluteURL;
 {
     [super setAutosavedContentsFileURL:absoluteURL];
@@ -732,7 +761,9 @@ originalContentsURL:(NSURL *)originalContentsURL
 
 - (BOOL)revertToContentsOfURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)outError;
 {
-    // Tear down old windows
+    // Tear down old windows. Wrap in an autorelease pool to get us much torn down before the reversion as we can
+    @autoreleasepool
+    {
     NSArray *controllers = [[self windowControllers] copy]; // we're sometimes handed underlying mutable array. #156271
     for (NSWindowController *aController in controllers)
     {
@@ -742,6 +773,7 @@ originalContentsURL:(NSURL *)originalContentsURL
 #if ! __has_feature(objc_arc)
     [controllers release];
 #endif
+    }
 
 
     @try
