@@ -56,7 +56,7 @@
     NSManagedObjectModel    *_managedObjectModel;
 	NSPersistentStore       *_store;
     
-    id  _additionalContent;
+    id  _contents;
 }
 
 /*  The name of folder directly inside the document which the persistent store will be saved to.
