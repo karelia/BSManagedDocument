@@ -787,6 +787,46 @@ originalContentsURL:(NSURL *)originalContentsURL
     }
 }
 
+#pragma mark Duplicating Documents
+
+- (NSDocument *)duplicateAndReturnError:(NSError **)outError;
+{
+    if (![self fakeSynchronousAutosaveAndReturnError:outError]) return nil;
+    
+    // Let super handle the overall duplication so it gets the window-handling
+    // right. But use custom writing logic that actually copies the existing doc
+    _contents = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+        return [self writeBackupToURL:url error:error];
+    };
+    
+    NSDocument *result = [super duplicateAndReturnError:outError];
+    _contents = nil;    // wasn't retained as not async
+    return result;
+}
+
+/*  Approximates a synchronous version of -autosaveDocumentWithDelegate:didAutosaveSelector:contextInfo:    */
+- (BOOL)fakeSynchronousAutosaveAndReturnError:(NSError **)outError;
+{
+    // Kick off an autosave
+    __block BOOL result = YES;
+    [self autosaveWithImplicitCancellability:NO completionHandler:^(NSError *errorOrNil) {
+        if (errorOrNil)
+        {
+            result = NO;
+            *outError = [errorOrNil copy];  // in case there's an autorelease pool
+        }
+    }];
+    
+    // Somewhat of a hack: wait for autosave to finish
+    [self performSynchronousFileAccessUsingBlock:^{ }];
+    
+#if ! __has_feature(objc_arc)
+    if (!result) [*outError autorelease];   // match the -copy above
+#endif
+    
+    return result;
+}
+
 #pragma mark Undo
 
 // No-ops, like NSPersistentDocument
