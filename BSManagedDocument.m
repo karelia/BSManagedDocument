@@ -307,18 +307,7 @@
     //  * If autosaving while quitting, calling -performActivity… here resuls in deadlock
     [self performAsynchronousFileAccessUsingBlock:^(void (^fileAccessCompletionHandler)(void)) {
         
-        // Completion handler *has* to run at some point, so extend it to do cleanup for us
-        void (^newCompletionHandler)(NSError *) = ^(NSError *error) {
-            fileAccessCompletionHandler();
-            if (completionHandler) completionHandler(error);
-        };
-        
-        
         NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
-        
-        
-        /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
-         */
         
         
         // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
@@ -328,7 +317,10 @@
         if (!_contents)
         {
             NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
-            newCompletionHandler(error);
+            
+            // The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
+            fileAccessCompletionHandler();
+            if (completionHandler) completionHandler(error);
             return;
         }
         
@@ -346,7 +338,8 @@
 #endif
             _contents = nil;
             
-            newCompletionHandler(error);
+            fileAccessCompletionHandler();
+            if (completionHandler) completionHandler(error);
         }];
     }];
 }
