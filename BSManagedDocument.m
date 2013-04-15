@@ -441,7 +441,11 @@
         return result;
     };
     
+#if !__has_feature(objc_arc)
     return [[contents copy] autorelease];
+#else
+    return [contents copy];
+#endif
 }
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
