@@ -283,8 +283,7 @@
     
     
     // Grab additional content that a subclass might provide
-    NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
-    id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
+    id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:outError];
     if (!additionalContent) return nil;
     
     
@@ -461,7 +460,7 @@
         
         
         // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
-        NSError *error;
+        NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
         _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
         
         if (!_contents)
