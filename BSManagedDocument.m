@@ -299,9 +299,11 @@
     BOOL (^contents)(NSURL *, NSURL *, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
         
         // For the first save of a document, create the folders on disk before we do anything else
+        // Then setup persistent store appropriately
         BOOL result = YES;
-        if (saveOperation == NSSaveAsOperation ||
-            (saveOperation == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:url]))
+        NSURL *storeURL = [self.class persistentStoreURLForDocumentURL:url];
+        
+        if (!_store)
         {
             result = [self createPackageDirectoriesAtURL:url
                                                   ofType:typeName
@@ -309,26 +311,23 @@
                                      originalContentsURL:originalContentsURL
                                                    error:error];
             if (!result) return NO;
-        }
-        
-        
-        
-        NSURL *storeURL = [self.class persistentStoreURLForDocumentURL:url];
-        
-        // Setup persistent store appropriately
-        if (!_store)
-        {
-            if (![self configurePersistentStoreCoordinatorForURL:storeURL
-                                                          ofType:typeName
-                                              modelConfiguration:nil
-                                                    storeOptions:nil
-                                                           error:error])
-            {
-                return NO;
-            }
+            
+            result = [self configurePersistentStoreCoordinatorForURL:storeURL
+                                                              ofType:typeName
+                                                  modelConfiguration:nil
+                                                        storeOptions:nil
+                                                               error:error];
+            if (!result) return NO;
         }
         else if (saveOperation == NSSaveAsOperation)
         {
+            result = [self createPackageDirectoriesAtURL:url
+                                                  ofType:typeName
+                                        forSaveOperation:saveOperation
+                                     originalContentsURL:originalContentsURL
+                                                   error:error];
+            if (!result) return NO;
+            
             /*  Save As for an existing store should be special, migrating the store instead of saving
              However, in our testing it can cause the next save to blow up if you go:
              
@@ -373,20 +372,24 @@
         else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation &&
                  !self.class.autosavesInPlace)  // loophole for 10.6. For now.
         {
-            // Fake a placeholder file ready for the store to save over
             if (![storeURL checkResourceIsReachableAndReturnError:NULL])
             {
+                result = [self createPackageDirectoriesAtURL:url
+                                                      ofType:typeName
+                                            forSaveOperation:saveOperation
+                                         originalContentsURL:originalContentsURL
+                                                       error:error];
+                if (!result) return NO;
+                
+                // Fake a placeholder file ready for the store to save over
                 if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
             }
         }
         
         
         // Right, let's get on with it!
-        result = [self writeStoreContentToURL:storeURL error:error];
-        if (!result) return NO;
+        if (![self writeStoreContentToURL:storeURL error:error]) return NO;
         
-        if (result)
-        {
             result = [self writeAdditionalContent:additionalContent toURL:url originalContentsURL:originalContentsURL error:error];
             
             if (result)
@@ -401,7 +404,6 @@
                     NSLog(@"Updating package mod date failed: %@", error);  // not critical, so just log it
                 }
             }
-        }
         
         
         // Restore persistent store URL after Save To-type operations. Even if save failed (just to be on the safe side)
