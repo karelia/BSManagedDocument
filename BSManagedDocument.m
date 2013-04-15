@@ -459,7 +459,7 @@
         NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
         
         
-        // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
+        // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
         NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
         _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
         
