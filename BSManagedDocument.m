@@ -811,12 +811,14 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     // Let super handle the overall duplication so it gets the window-handling
     // right. But use custom writing logic that actually copies the existing doc
-    _contents = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+    BOOL (^contentsBlock)(NSURL*, NSURL*, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
         return [self writeBackupToURL:url error:error];
     };
     
+    _contents = contentsBlock;
     NSDocument *result = [super duplicateAndReturnError:outError];
-    _contents = nil;    // wasn't retained as not async
+    _contents = nil;
+    
     return result;
 }
 
