@@ -303,36 +303,12 @@
         if (saveOperation == NSSaveAsOperation ||
             (saveOperation == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:url]))
         {
-            NSDictionary *attributes = [self fileAttributesToWriteToURL:url
-                                                                 ofType:typeName
-                                                       forSaveOperation:saveOperation
-                                                    originalContentsURL:originalContentsURL
-                                                                  error:error];
-            
-            if (!attributes) return NO;
-            
-            result = [[NSFileManager defaultManager] createDirectoryAtPath:[url path]
-                                               withIntermediateDirectories:NO
-                                                                attributes:attributes
-                                                                     error:error];
-            
-            if (result)
-            {
-                // Create store content folder too
-                NSString *storeContent = [[self class] storeContentName];
-                if (storeContent)
-                {
-                    NSURL *storeContentURL = [url URLByAppendingPathComponent:storeContent];
-                    
-                    result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
-                                                       withIntermediateDirectories:NO
-                                                                        attributes:attributes
-                                                                             error:error];
-                }
-            }
-            
-            // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
-            if (result) [self setBundleBitForDirectoryAtURL:url];
+            result = [self createPackageDirectoriesAtURL:url
+                                                  ofType:typeName
+                                        forSaveOperation:saveOperation
+                                     originalContentsURL:originalContentsURL
+                                                   error:error];
+            if (!result) return NO;
         }
         
         
@@ -394,7 +370,8 @@
             // -writeStoreContent… routine will adjust store URL for us
             if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
         }
-        else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation)
+        else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation &&
+                 !self.class.autosavesInPlace)  // loophole for 10.6. For now.
         {
             // Fake a placeholder file ready for the store to save over
             if (![storeURL checkResourceIsReachableAndReturnError:NULL])
@@ -445,6 +422,45 @@
 #else
     return [contents copy];
 #endif
+}
+
+- (BOOL)createPackageDirectoriesAtURL:(NSURL *)url
+                               ofType:(NSString *)typeName
+                     forSaveOperation:(NSSaveOperationType)saveOperation
+                  originalContentsURL:(NSURL *)originalContentsURL
+                                error:(NSError **)error;
+{
+    // Create overall package
+    NSDictionary *attributes = [self fileAttributesToWriteToURL:url
+                                                         ofType:typeName
+                                               forSaveOperation:saveOperation
+                                            originalContentsURL:originalContentsURL
+                                                          error:error];
+    if (!attributes) return NO;
+    
+    BOOL result = [[NSFileManager defaultManager] createDirectoryAtPath:[url path]
+                                            withIntermediateDirectories:NO
+                                                             attributes:attributes
+                                                                  error:error];
+    if (!result) return NO;
+    
+    // Create store content folder too
+    NSString *storeContent = self.class.storeContentName;
+    if (storeContent)
+    {
+        NSURL *storeContentURL = [url URLByAppendingPathComponent:storeContent];
+        
+        result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
+                                           withIntermediateDirectories:NO
+                                                            attributes:attributes
+                                                                 error:error];
+        if (!result) return NO;
+    }
+    
+    // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
+    [self setBundleBitForDirectoryAtURL:url];
+    
+    return YES;
 }
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
