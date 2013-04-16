@@ -292,8 +292,7 @@
     
     
     // Grab additional content that a subclass might provide
-    NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
-    id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
+    id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:outError];
     if (!additionalContent) return nil;
     
     
@@ -309,60 +308,35 @@
     BOOL (^contents)(NSURL *, NSURL *, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
         
         // For the first save of a document, create the folders on disk before we do anything else
+        // Then setup persistent store appropriately
         BOOL result = YES;
-        if (saveOperation == NSSaveAsOperation ||
-            (saveOperation == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:url]))
-        {
-            NSDictionary *attributes = [self fileAttributesToWriteToURL:url
-                                                                 ofType:typeName
-                                                       forSaveOperation:saveOperation
-                                                    originalContentsURL:originalContentsURL
-                                                                  error:error];
-            
-            if (!attributes) return NO;
-            
-            result = [[NSFileManager defaultManager] createDirectoryAtPath:[url path]
-                                               withIntermediateDirectories:NO
-                                                                attributes:attributes
-                                                                     error:error];
-            
-            if (result)
-            {
-                // Create store content folder too
-                NSString *storeContent = [[self class] storeContentName];
-                if (storeContent)
-                {
-                    NSURL *storeContentURL = [url URLByAppendingPathComponent:storeContent];
-                    
-                    result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
-                                                       withIntermediateDirectories:NO
-                                                                        attributes:attributes
-                                                                             error:error];
-                }
-            }
-            
-            // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
-            if (result) [self setBundleBitForDirectoryAtURL:url];
-        }
-        
-        
-        
         NSURL *storeURL = [self.class persistentStoreURLForDocumentURL:url];
         
-        // Setup persistent store appropriately
         if (!_store)
         {
-            if (![self configurePersistentStoreCoordinatorForURL:storeURL
-                                                          ofType:typeName
-                                              modelConfiguration:nil
-                                                    storeOptions:nil
-                                                           error:error])
-            {
-                return NO;
-            }
+            result = [self createPackageDirectoriesAtURL:url
+                                                  ofType:typeName
+                                        forSaveOperation:saveOperation
+                                     originalContentsURL:originalContentsURL
+                                                   error:error];
+            if (!result) return NO;
+            
+            result = [self configurePersistentStoreCoordinatorForURL:storeURL
+                                                              ofType:typeName
+                                                  modelConfiguration:nil
+                                                        storeOptions:nil
+                                                               error:error];
+            if (!result) return NO;
         }
         else if (saveOperation == NSSaveAsOperation)
         {
+            result = [self createPackageDirectoriesAtURL:url
+                                                  ofType:typeName
+                                        forSaveOperation:saveOperation
+                                     originalContentsURL:originalContentsURL
+                                                   error:error];
+            if (!result) return NO;
+            
             /*  Save As for an existing store should be special, migrating the store instead of saving
              However, in our testing it can cause the next save to blow up if you go:
              
@@ -404,22 +378,27 @@
             // -writeStoreContent… routine will adjust store URL for us
             if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
         }
-        else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation)
+        else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation &&
+                 !self.class.autosavesInPlace)  // loophole for 10.6. For now.
         {
-            // Fake a placeholder file ready for the store to save over
             if (![storeURL checkResourceIsReachableAndReturnError:NULL])
             {
+                result = [self createPackageDirectoriesAtURL:url
+                                                      ofType:typeName
+                                            forSaveOperation:saveOperation
+                                         originalContentsURL:originalContentsURL
+                                                       error:error];
+                if (!result) return NO;
+                
+                // Fake a placeholder file ready for the store to save over
                 if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
             }
         }
         
         
         // Right, let's get on with it!
-        result = [self writeStoreContentToURL:storeURL error:error];
-        if (!result) return NO;
+        if (![self writeStoreContentToURL:storeURL error:error]) return NO;
         
-        if (result)
-        {
             result = [self writeAdditionalContent:additionalContent toURL:url originalContentsURL:originalContentsURL error:error];
             
             if (result)
@@ -434,7 +413,6 @@
                     NSLog(@"Updating package mod date failed: %@", error);  // not critical, so just log it
                 }
             }
-        }
         
         
         // Restore persistent store URL after Save To-type operations. Even if save failed (just to be on the safe side)
@@ -450,7 +428,50 @@
         return result;
     };
     
+#if !__has_feature(objc_arc)
     return [[contents copy] autorelease];
+#else
+    return [contents copy];
+#endif
+}
+
+- (BOOL)createPackageDirectoriesAtURL:(NSURL *)url
+                               ofType:(NSString *)typeName
+                     forSaveOperation:(NSSaveOperationType)saveOperation
+                  originalContentsURL:(NSURL *)originalContentsURL
+                                error:(NSError **)error;
+{
+    // Create overall package
+    NSDictionary *attributes = [self fileAttributesToWriteToURL:url
+                                                         ofType:typeName
+                                               forSaveOperation:saveOperation
+                                            originalContentsURL:originalContentsURL
+                                                          error:error];
+    if (!attributes) return NO;
+    
+    BOOL result = [[NSFileManager defaultManager] createDirectoryAtPath:[url path]
+                                            withIntermediateDirectories:NO
+                                                             attributes:attributes
+                                                                  error:error];
+    if (!result) return NO;
+    
+    // Create store content folder too
+    NSString *storeContent = self.class.storeContentName;
+    if (storeContent)
+    {
+        NSURL *storeContentURL = [url URLByAppendingPathComponent:storeContent];
+        
+        result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
+                                           withIntermediateDirectories:NO
+                                                            attributes:attributes
+                                                                 error:error];
+        if (!result) return NO;
+    }
+    
+    // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
+    [self setBundleBitForDirectoryAtURL:url];
+    
+    return YES;
 }
 
 - (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
@@ -465,8 +486,8 @@
         NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
         
         
-        // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
-        NSError *error;
+        // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
+        NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
         _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
         
         if (!_contents)
@@ -816,12 +837,14 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     // Let super handle the overall duplication so it gets the window-handling
     // right. But use custom writing logic that actually copies the existing doc
-    _contents = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+    BOOL (^contentsBlock)(NSURL*, NSURL*, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
         return [self writeBackupToURL:url error:error];
     };
     
+    _contents = contentsBlock;
     NSDocument *result = [super duplicateAndReturnError:outError];
-    _contents = nil;    // wasn't retained as not async
+    _contents = nil;
+    
     return result;
 }
 
