@@ -369,20 +369,43 @@
             // -writeStoreContent… routine will adjust store URL for us
             if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
         }
-        else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation &&
-                 !self.class.autosavesInPlace)  // loophole for 10.6. For now.
+        else
         {
-            if (![storeURL checkResourceIsReachableAndReturnError:NULL])
+            if (self.class.autosavesInPlace)
             {
-                result = [self createPackageDirectoriesAtURL:url
-                                                      ofType:typeName
-                                            forSaveOperation:saveOperation
-                                         originalContentsURL:originalContentsURL
-                                                       error:error];
-                if (!result) return NO;
-                
-                // Fake a placeholder file ready for the store to save over
-                if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
+                if (saveOperation == NSAutosaveElsewhereOperation && [NSThread isMainThread])
+                {
+                    // Special-case autosave-elsewhere for 10.7+ documents that have been saved
+                    // e.g. reverting a doc that has unautosaved changes
+                    // The system asks us to autosave it to some temp location before closing
+                    // CAN'T save-in-place to achieve that, since the doc system is expecting us to leave the original doc untouched, ready to load up as the "reverted" version
+                    // But the doc system also asks to do this when performing a Save As operation, and choosing to discard unsaved edits to the existing doc. In which case the SQLite store moves out underneath us and we blow up shortly after
+                    // Doc system apparently considers it fine to fail at this, since it passes in NULL as the error pointer
+                    // With great sadness and wretchedness, that's the best workaround I have for the moment
+                    NSURL *fileURL = self.fileURL;
+                    if (fileURL && !self.autosavedContentsFileURL && error)
+                    {
+                        if (![self writeBackupToURL:url error:error]) return NO;
+                    }
+                }
+            }
+            else
+            {
+                if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation)
+                {
+                    if (![storeURL checkResourceIsReachableAndReturnError:NULL])
+                    {
+                        result = [self createPackageDirectoriesAtURL:url
+                                                              ofType:typeName
+                                                    forSaveOperation:saveOperation
+                                                 originalContentsURL:originalContentsURL
+                                                               error:error];
+                        if (!result) return NO;
+                        
+                        // Fake a placeholder file ready for the store to save over
+                        if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
+                    }
+                }
             }
         }
         
