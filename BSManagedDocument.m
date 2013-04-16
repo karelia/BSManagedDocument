@@ -296,7 +296,7 @@
     
     
     // What we consider to be "contents" is actually a worker block
-    BOOL (^contents)(NSURL *, NSURL *, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+    BOOL (^contents)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
         
         // For the first save of a document, create the folders on disk before we do anything else
         // Then setup persistent store appropriately
@@ -636,8 +636,8 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     
     // We implement contents as a block which is called to perform the writing
-    BOOL (^contentsBlock)(NSURL *, NSURL *, NSError**) = _contents;
-    return contentsBlock(inURL, originalContentsURL, error);
+    BOOL (^contentsBlock)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = _contents;
+    return contentsBlock(inURL, saveOp, originalContentsURL, error);
 }
 
 - (void)setBundleBitForDirectoryAtURL:(NSURL *)url;
@@ -844,7 +844,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     // Let super handle the overall duplication so it gets the window-handling
     // right. But use custom writing logic that actually copies the existing doc
-    BOOL (^contentsBlock)(NSURL*, NSURL*, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+    BOOL (^contentsBlock)(NSURL*, NSSaveOperationType, NSURL*, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
         return [self writeBackupToURL:url error:error];
     };
     
