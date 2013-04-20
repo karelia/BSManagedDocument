@@ -378,7 +378,9 @@
             
             // Instead, we shall fallback to copying the store to the new location
             // -writeStoreContent… routine will adjust store URL for us
-            if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
+            if (![[NSFileManager defaultManager] copyItemAtURL:[self.class persistentStoreURLForDocumentURL:self.mostRecentlySavedFileURL]
+                                                         toURL:storeURL
+                                                         error:error]) return NO;
         }
         else
         {
