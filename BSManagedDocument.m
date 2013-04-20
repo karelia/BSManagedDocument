@@ -190,22 +190,7 @@
 - (void)close;
 {
     [super close];
-    
-    // Clean up custom autosave dir
-    NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
-    if (autosaveTempDir)
-    {
-        [autosaveTempDir retain];
-        self.autosavedContentsTempDirectoryURL = nil;
-        
-        NSError *error;
-        if (![[NSFileManager defaultManager] removeItemAtURL:autosaveTempDir error:&error])
-        {
-            NSLog(@"Unable to remove temporary directory: %@", error);
-        }
-        
-        [autosaveTempDir release];
-    }
+    [self deleteAutosavedContentsTempDirectory];
 }
 
 // It's simpler to wrap the whole method in a conditional test rather than using a macro for each line.
@@ -877,6 +862,24 @@ originalContentsURL:(NSURL *)originalContentsURL
 }
 
 @synthesize autosavedContentsTempDirectoryURL = _autosavedContentsTempDirectoryURL;
+
+- (void)deleteAutosavedContentsTempDirectory;
+{
+    NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
+    if (autosaveTempDir)
+    {
+        [autosaveTempDir retain];
+        self.autosavedContentsTempDirectoryURL = nil;
+        
+        NSError *error;
+        if (![[NSFileManager defaultManager] removeItemAtURL:autosaveTempDir error:&error])
+        {
+            NSLog(@"Unable to remove temporary directory: %@", error);
+        }
+        
+        [autosaveTempDir release];
+    }
+}
 
 #pragma mark Reverting Documents
 
