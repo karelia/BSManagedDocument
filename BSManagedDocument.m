@@ -527,6 +527,8 @@
         if (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation ||
             (saveOperation == NSAutosaveElsewhereOperation && [absoluteURL isEqual:[self autosavedContentsFileURL]]))
         {
+            NSURL *backupURL = nil;
+            
 			// As of 10.8, need to make a backup of the document when saving in-place
 			// Unfortunately, it turns out 10.7 includes -backupFileURL, just that it's private. Checking AppKit number seems to be our best bet, and I have to hardcode that since 10_8 is not defined in the SDK yet. (1187 was found simply by looking at the GM)
 			if (NSAppKitVersionNumber >= 1187 &&
@@ -534,7 +536,7 @@
 				(saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation) &&
 				[[self class] preservesVersions])			// otherwise backupURL has a different meaning
 			{
-				NSURL *backupURL = [self backupFileURL];
+				backupURL = [self backupFileURL];
 				if (backupURL)
 				{
 					if (![self writeBackupToURL:backupURL error:outError])
@@ -559,6 +561,20 @@
                           forSaveOperation:saveOperation
                        originalContentsURL:[self fileURL]
                                      error:outError];
+            
+            // Clean up backup if one was made
+            // If the failure was actualy NSUserCancelledError thanks to
+            // autosaving being implicitly cancellable and a subclass deciding
+            // to bail out, this HAS to be done otherwise the doc system will
+            // weirdly complain that a file by the same name already exists
+            if (backupURL)
+            {
+                NSError *error;
+                if (![[NSFileManager defaultManager] removeItemAtURL:backupURL error:&error])
+                {
+                    NSLog(@"Unable to remove backup after failed write: %@", error);
+                }
+            }
             
             // The -write… method maybe wasn't to know that it's writing to the live document, so might have modified it. #179730
             // We can patch up a bit by updating modification date so user doesn't get baffling document-edited warnings again!
