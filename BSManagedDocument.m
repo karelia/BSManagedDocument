@@ -21,6 +21,11 @@
 #import "BSManagedDocument.h"
 
 
+@interface BSManagedDocument ()
+@property(nonatomic, copy) NSURL *autosavedContentsTempDirectoryURL;
+@end
+
+
 @implementation BSManagedDocument
 
 #pragma mark UIManagedDocument-inspired methods
@@ -181,6 +186,27 @@
 }
 
 #pragma mark Lifecycle
+
+- (void)close;
+{
+    [super close];
+    
+    // Clean up custom autosave dir
+    NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
+    if (autosaveTempDir)
+    {
+        [autosaveTempDir retain];
+        self.autosavedContentsTempDirectoryURL = nil;
+        
+        NSError *error;
+        if (![[NSFileManager defaultManager] removeItemAtURL:autosaveTempDir error:&error])
+        {
+            NSLog(@"Unable to remove temporary directory: %@", error);
+        }
+        
+        [autosaveTempDir release];
+    }
+}
 
 // It's simpler to wrap the whole method in a conditional test rather than using a macro for each line.
 #if ! __has_feature(objc_arc)
@@ -389,14 +415,18 @@
                         if (!autosaveURL)
                         {
                             // Make a copy of the existing doc to a location we control first
-                            autosaveURL = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory
-                                                                                 inDomain:NSUserDomainMask
-                                                                        appropriateForURL:fileURL
-                                                                                   create:YES
-                                                                                    error:error];
-                            if (!autosaveURL) return NO;
+                            NSURL *autosaveTempDirectory = self.autosavedContentsTempDirectoryURL;
+                            NSAssert(autosaveTempDirectory == nil, @"Somehow have a temp directory, but no knowledge of a doc inside it");
                             
-                            autosaveURL = [autosaveURL URLByAppendingPathComponent:fileURL.lastPathComponent];
+                            autosaveTempDirectory = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory
+                                                                                           inDomain:NSUserDomainMask
+                                                                                  appropriateForURL:fileURL
+                                                                                             create:YES
+                                                                                              error:error];
+                            if (!autosaveTempDirectory) return NO;
+                            self.autosavedContentsTempDirectoryURL = autosaveTempDirectory;
+                            
+                            autosaveURL = [autosaveTempDirectory URLByAppendingPathComponent:fileURL.lastPathComponent];
                             if (![self writeBackupToURL:autosaveURL error:error]) return NO;
                             
                             self.autosavedContentsFileURL = autosaveURL;
@@ -845,6 +875,8 @@ originalContentsURL:(NSURL *)originalContentsURL
     if (!result) result = [self fileURL];
     return result;
 }
+
+@synthesize autosavedContentsTempDirectoryURL = _autosavedContentsTempDirectoryURL;
 
 #pragma mark Reverting Documents
 
