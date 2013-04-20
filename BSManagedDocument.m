@@ -863,6 +863,12 @@ originalContentsURL:(NSURL *)originalContentsURL
     return result;
 }
 
+/*
+ When asked to autosave an existing doc elsewhere, we do so via an
+ intermedate, temporary copy of the doc. This code tracks that temp folder
+ so it can be deleted when no longer in use.
+ */
+
 @synthesize autosavedContentsTempDirectoryURL = _autosavedContentsTempDirectoryURL;
 
 - (void)deleteAutosavedContentsTempDirectory;
