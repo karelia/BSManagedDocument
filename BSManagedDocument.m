@@ -373,7 +373,7 @@
         {
             if (self.class.autosavesInPlace)
             {
-                if (saveOperation == NSAutosaveElsewhereOperation && [NSThread isMainThread])
+                if (saveOperation == NSAutosaveElsewhereOperation)
                 {
                     // Special-case autosave-elsewhere for 10.7+ documents that have been saved
                     // e.g. reverting a doc that has unautosaved changes
@@ -383,9 +383,39 @@
                     // Doc system apparently considers it fine to fail at this, since it passes in NULL as the error pointer
                     // With great sadness and wretchedness, that's the best workaround I have for the moment
                     NSURL *fileURL = self.fileURL;
-                    if (fileURL && !self.autosavedContentsFileURL && error)
+                    if (fileURL)
                     {
-                        if (![self writeBackupToURL:url error:error]) return NO;
+                        NSURL *autosaveURL = self.autosavedContentsFileURL;
+                        if (!autosaveURL)
+                        {
+                            // Make a copy of the existing doc to a location we control first
+                            autosaveURL = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory
+                                                                                 inDomain:NSUserDomainMask
+                                                                        appropriateForURL:fileURL
+                                                                                   create:YES
+                                                                                    error:error];
+                            if (!autosaveURL) return NO;
+                            
+                            autosaveURL = [autosaveURL URLByAppendingPathComponent:fileURL.lastPathComponent];
+                            if (![self writeBackupToURL:autosaveURL error:error]) return NO;
+                            
+                            self.autosavedContentsFileURL = autosaveURL;
+                        }
+                        
+                        // Bring the autosaved doc up-to-date
+                        result = [self writeStoreContentToURL:[self.class persistentStoreURLForDocumentURL:autosaveURL]
+                                                        error:error];
+                        if (!result) return NO;
+                        
+                        result = [self writeAdditionalContent:additionalContent
+                                                        toURL:autosaveURL
+                                          originalContentsURL:originalContentsURL
+                                                        error:error];
+                        if (!result) return NO;
+                        
+                        
+                        // Then copy that across to the final URL
+                        return [self writeBackupToURL:url error:error];
                     }
                 }
             }
