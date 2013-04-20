@@ -902,7 +902,10 @@ originalContentsURL:(NSURL *)originalContentsURL
 
     @try
     {
-        return [super revertToContentsOfURL:absoluteURL ofType:typeName error:outError];
+        if (![super revertToContentsOfURL:absoluteURL ofType:typeName error:outError]) return NO;
+        [self deleteAutosavedContentsTempDirectory];
+        
+        return YES;
     }
     @finally
     {
