@@ -21,6 +21,11 @@
 #import "BSManagedDocument.h"
 
 
+@interface BSManagedDocument ()
+@property(nonatomic, copy) NSURL *autosavedContentsTempDirectoryURL;
+@end
+
+
 @implementation BSManagedDocument
 
 #pragma mark UIManagedDocument-inspired methods
@@ -184,6 +189,12 @@
 
 #pragma mark Lifecycle
 
+- (void)close;
+{
+    [super close];
+    [self deleteAutosavedContentsTempDirectory];
+}
+
 // It's simpler to wrap the whole method in a conditional test rather than using a macro for each line.
 #if ! __has_feature(objc_arc)
 - (void)dealloc;
@@ -305,7 +316,7 @@
     
     
     // What we consider to be "contents" is actually a worker block
-    BOOL (^contents)(NSURL *, NSURL *, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+    BOOL (^contents)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
         
         // For the first save of a document, create the folders on disk before we do anything else
         // Then setup persistent store appropriately
@@ -376,22 +387,81 @@
             
             // Instead, we shall fallback to copying the store to the new location
             // -writeStoreContent… routine will adjust store URL for us
-            if (![[NSFileManager defaultManager] copyItemAtURL:_store.URL toURL:storeURL error:error]) return NO;
+            if (![[NSFileManager defaultManager] copyItemAtURL:[self.class persistentStoreURLForDocumentURL:self.mostRecentlySavedFileURL]
+                                                         toURL:storeURL
+                                                         error:error]) return NO;
         }
-        else if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation &&
-                 !self.class.autosavesInPlace)  // loophole for 10.6. For now.
+        else
         {
-            if (![storeURL checkResourceIsReachableAndReturnError:NULL])
+            if (self.class.autosavesInPlace)
             {
-                result = [self createPackageDirectoriesAtURL:url
-                                                      ofType:typeName
-                                            forSaveOperation:saveOperation
-                                         originalContentsURL:originalContentsURL
-                                                       error:error];
-                if (!result) return NO;
-                
-                // Fake a placeholder file ready for the store to save over
-                if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
+                if (saveOperation == NSAutosaveElsewhereOperation)
+                {
+                    // Special-case autosave-elsewhere for 10.7+ documents that have been saved
+                    // e.g. reverting a doc that has unautosaved changes
+                    // The system asks us to autosave it to some temp location before closing
+                    // CAN'T save-in-place to achieve that, since the doc system is expecting us to leave the original doc untouched, ready to load up as the "reverted" version
+                    // But the doc system also asks to do this when performing a Save As operation, and choosing to discard unsaved edits to the existing doc. In which case the SQLite store moves out underneath us and we blow up shortly after
+                    // Doc system apparently considers it fine to fail at this, since it passes in NULL as the error pointer
+                    // With great sadness and wretchedness, that's the best workaround I have for the moment
+                    NSURL *fileURL = self.fileURL;
+                    if (fileURL)
+                    {
+                        NSURL *autosaveURL = self.autosavedContentsFileURL;
+                        if (!autosaveURL)
+                        {
+                            // Make a copy of the existing doc to a location we control first
+                            NSURL *autosaveTempDirectory = self.autosavedContentsTempDirectoryURL;
+                            NSAssert(autosaveTempDirectory == nil, @"Somehow have a temp directory, but no knowledge of a doc inside it");
+                            
+                            autosaveTempDirectory = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory
+                                                                                           inDomain:NSUserDomainMask
+                                                                                  appropriateForURL:fileURL
+                                                                                             create:YES
+                                                                                              error:error];
+                            if (!autosaveTempDirectory) return NO;
+                            self.autosavedContentsTempDirectoryURL = autosaveTempDirectory;
+                            
+                            autosaveURL = [autosaveTempDirectory URLByAppendingPathComponent:fileURL.lastPathComponent];
+                            if (![self writeBackupToURL:autosaveURL error:error]) return NO;
+                            
+                            self.autosavedContentsFileURL = autosaveURL;
+                        }
+                        
+                        // Bring the autosaved doc up-to-date
+                        result = [self writeStoreContentToURL:[self.class persistentStoreURLForDocumentURL:autosaveURL]
+                                                        error:error];
+                        if (!result) return NO;
+                        
+                        result = [self writeAdditionalContent:additionalContent
+                                                        toURL:autosaveURL
+                                          originalContentsURL:originalContentsURL
+                                                        error:error];
+                        if (!result) return NO;
+                        
+                        
+                        // Then copy that across to the final URL
+                        return [self writeBackupToURL:url error:error];
+                    }
+                }
+            }
+            else
+            {
+                if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation)
+                {
+                    if (![storeURL checkResourceIsReachableAndReturnError:NULL])
+                    {
+                        result = [self createPackageDirectoriesAtURL:url
+                                                              ofType:typeName
+                                                    forSaveOperation:saveOperation
+                                                 originalContentsURL:originalContentsURL
+                                                               error:error];
+                        if (!result) return NO;
+                        
+                        // Fake a placeholder file ready for the store to save over
+                        if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
+                    }
+                }
             }
         }
         
@@ -514,10 +584,29 @@
 #endif
             _contents = nil;
             
+            if (!error &&
+                (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation || saveOperation == NSSaveAsOperation))
+            {
+                [self deleteAutosavedContentsTempDirectory];
+            }
+            
             fileAccessCompletionHandler();
             if (completionHandler) completionHandler(error);
         }];
     }];
+}
+
+- (BOOL)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError **)outError;
+{
+    BOOL result = [super saveToURL:url ofType:typeName forSaveOperation:saveOperation error:outError];
+    
+    if (result &&
+        (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation || saveOperation == NSSaveAsOperation))
+    {
+        [self deleteAutosavedContentsTempDirectory];
+    }
+    
+    return result;
 }
 
 /*	Regular Save operations can write directly to the existing document since Core Data provides atomicity for us
@@ -536,6 +625,8 @@
         if (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation ||
             (saveOperation == NSAutosaveElsewhereOperation && [absoluteURL isEqual:[self autosavedContentsFileURL]]))
         {
+            NSURL *backupURL = nil;
+            
 			// As of 10.8, need to make a backup of the document when saving in-place
 			// Unfortunately, it turns out 10.7 includes -backupFileURL, just that it's private. Checking AppKit number seems to be our best bet, and I have to hardcode that since 10_8 is not defined in the SDK yet. (1187 was found simply by looking at the GM)
 			if (NSAppKitVersionNumber >= 1187 &&
@@ -543,7 +634,7 @@
 				(saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation) &&
 				[[self class] preservesVersions])			// otherwise backupURL has a different meaning
 			{
-				NSURL *backupURL = [self backupFileURL];
+				backupURL = [self backupFileURL];
 				if (backupURL)
 				{
 					if (![self writeBackupToURL:backupURL error:outError])
@@ -568,6 +659,20 @@
                           forSaveOperation:saveOperation
                        originalContentsURL:[self fileURL]
                                      error:outError];
+            
+            // Clean up backup if one was made
+            // If the failure was actualy NSUserCancelledError thanks to
+            // autosaving being implicitly cancellable and a subclass deciding
+            // to bail out, this HAS to be done otherwise the doc system will
+            // weirdly complain that a file by the same name already exists
+            if (backupURL)
+            {
+                NSError *error;
+                if (![[NSFileManager defaultManager] removeItemAtURL:backupURL error:&error])
+                {
+                    NSLog(@"Unable to remove backup after failed write: %@", error);
+                }
+            }
             
             // The -write… method maybe wasn't to know that it's writing to the live document, so might have modified it. #179730
             // We can patch up a bit by updating modification date so user doesn't get baffling document-edited warnings again!
@@ -596,8 +701,7 @@
 
 - (BOOL)writeBackupToURL:(NSURL *)backupURL error:(NSError **)outError;
 {
-    NSURL *source = self.fileURL;
-    if (!source) source = self.autosavedContentsFileURL;
+    NSURL *source = self.mostRecentlySavedFileURL;
 	return [[NSFileManager defaultManager] copyItemAtURL:source toURL:backupURL error:outError];
 }
 
@@ -629,8 +733,8 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     
     // We implement contents as a block which is called to perform the writing
-    BOOL (^contentsBlock)(NSURL *, NSURL *, NSError**) = _contents;
-    return contentsBlock(inURL, originalContentsURL, error);
+    BOOL (^contentsBlock)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = _contents;
+    return contentsBlock(inURL, saveOp, originalContentsURL, error);
 }
 
 - (void)setBundleBitForDirectoryAtURL:(NSURL *)url;
@@ -787,6 +891,32 @@ originalContentsURL:(NSURL *)originalContentsURL
     return result;
 }
 
+/*
+ When asked to autosave an existing doc elsewhere, we do so via an
+ intermedate, temporary copy of the doc. This code tracks that temp folder
+ so it can be deleted when no longer in use.
+ */
+
+@synthesize autosavedContentsTempDirectoryURL = _autosavedContentsTempDirectoryURL;
+
+- (void)deleteAutosavedContentsTempDirectory;
+{
+    NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
+    if (autosaveTempDir)
+    {
+        [autosaveTempDir retain];
+        self.autosavedContentsTempDirectoryURL = nil;
+        
+        NSError *error;
+        if (![[NSFileManager defaultManager] removeItemAtURL:autosaveTempDir error:&error])
+        {
+            NSLog(@"Unable to remove temporary directory: %@", error);
+        }
+        
+        [autosaveTempDir release];
+    }
+}
+
 #pragma mark Reverting Documents
 
 - (BOOL)revertToContentsOfURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)outError;
@@ -808,7 +938,10 @@ originalContentsURL:(NSURL *)originalContentsURL
 
     @try
     {
-        return [super revertToContentsOfURL:absoluteURL ofType:typeName error:outError];
+        if (![super revertToContentsOfURL:absoluteURL ofType:typeName error:outError]) return NO;
+        [self deleteAutosavedContentsTempDirectory];
+        
+        return YES;
     }
     @finally
     {
@@ -837,7 +970,7 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     // Let super handle the overall duplication so it gets the window-handling
     // right. But use custom writing logic that actually copies the existing doc
-    BOOL (^contentsBlock)(NSURL*, NSURL*, NSError**) = ^(NSURL *url, NSURL *originalContentsURL, NSError **error) {
+    BOOL (^contentsBlock)(NSURL*, NSSaveOperationType, NSURL*, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
         return [self writeBackupToURL:url error:error];
     };
     
