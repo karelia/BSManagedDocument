@@ -895,7 +895,9 @@ originalContentsURL:(NSURL *)originalContentsURL
     NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
     if (autosaveTempDir)
     {
-        [autosaveTempDir retain];
+#if ! __has_feature(objc_arc)
+        [[autosaveTempDir retain] autorelease];
+#endif
         self.autosavedContentsTempDirectoryURL = nil;
         
         NSError *error;
@@ -903,8 +905,6 @@ originalContentsURL:(NSURL *)originalContentsURL
         {
             NSLog(@"Unable to remove temporary directory: %@", error);
         }
-        
-        [autosaveTempDir release];
     }
 }
 
