@@ -660,24 +660,25 @@
                        originalContentsURL:[self fileURL]
                                      error:outError];
             
-            // Clean up backup if one was made
-            // If the failure was actualy NSUserCancelledError thanks to
-            // autosaving being implicitly cancellable and a subclass deciding
-            // to bail out, this HAS to be done otherwise the doc system will
-            // weirdly complain that a file by the same name already exists
-            if (backupURL)
-            {
-                NSError *error;
-                if (![[NSFileManager defaultManager] removeItemAtURL:backupURL error:&error])
-                {
-                    NSLog(@"Unable to remove backup after failed write: %@", error);
-                }
-            }
             
-            // The -write… method maybe wasn't to know that it's writing to the live document, so might have modified it. #179730
-            // We can patch up a bit by updating modification date so user doesn't get baffling document-edited warnings again!
             if (!result)
             {
+                // Clean up backup if one was made
+                // If the failure was actualy NSUserCancelledError thanks to
+                // autosaving being implicitly cancellable and a subclass deciding
+                // to bail out, this HAS to be done otherwise the doc system will
+                // weirdly complain that a file by the same name already exists
+                if (backupURL)
+                {
+                    NSError *error;
+                    if (![[NSFileManager defaultManager] removeItemAtURL:backupURL error:&error])
+                    {
+                        NSLog(@"Unable to remove backup after failed write: %@", error);
+                    }
+                }
+                
+                // The -write… method maybe wasn't to know that it's writing to the live document, so might have modified it. #179730
+                // We can patch up a bit by updating modification date so user doesn't get baffling document-edited warnings again!
                 NSDate *modDate;
                 if ([absoluteURL getResourceValue:&modDate forKey:NSURLContentModificationDateKey error:NULL])
                 {
@@ -904,7 +905,9 @@ originalContentsURL:(NSURL *)originalContentsURL
     NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
     if (autosaveTempDir)
     {
-        [autosaveTempDir retain];
+#if ! __has_feature(objc_arc)
+        [[autosaveTempDir retain] autorelease];
+#endif
         self.autosavedContentsTempDirectoryURL = nil;
         
         NSError *error;
@@ -912,8 +915,6 @@ originalContentsURL:(NSURL *)originalContentsURL
         {
             NSLog(@"Unable to remove temporary directory: %@", error);
         }
-        
-        [autosaveTempDir release];
     }
 }
 
