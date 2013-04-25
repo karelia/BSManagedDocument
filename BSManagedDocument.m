@@ -476,7 +476,7 @@ originalContentsURL:(NSURL *)originalContentsURL
         }
         else
         {
-            [NSException raise:NSInvalidArgumentException format:@"Attempt to write document on background thread, bypassing usual save methods"];
+            [NSException raise:NSInvalidArgumentException format:@"Attempt to write document on background thread (operation %u), bypassing usual save methods, to: %@", (unsigned)saveOp, [inURL path]];
             return NO;
         }
     }
