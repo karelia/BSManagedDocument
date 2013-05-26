@@ -643,14 +643,23 @@
 			}
 			
 			
+            // This may be invoked from a background thread if the user chose to save anyway in response to a "file modified by another application" prompt. Thus take care to invoke it from the main thread.
+            BOOL __block result = NO;
+            void (^writerBlock)() = ^{
             // NSDocument attempts to write a copy of the document out at a temporary location.
             // Core Data cannot support this, so we override it to save directly.
-            BOOL result = [self writeToURL:absoluteURL
-                                    ofType:typeName
-                          forSaveOperation:saveOperation
-                       originalContentsURL:[self fileURL]
-                                     error:outError];
-            
+                result = [self writeToURL:absoluteURL
+                                        ofType:typeName
+                              forSaveOperation:saveOperation
+                           originalContentsURL:[self fileURL]
+                                         error:outError];
+            };
+            if ([NSThread isMainThread]) {
+                writerBlock();
+            } else {
+                dispatch_sync(dispatch_get_main_queue(), writerBlock);
+            }
+        
             
             if (!result)
             {
