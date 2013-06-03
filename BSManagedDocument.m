@@ -317,10 +317,23 @@
         // Extend completion handler for further cleanup
         newCompletionHandler = ^(NSError *error) {
             
+            // If the save failed, it might be an error the user can recover from.
+			// e.g. the dreaded "file modified by another application"
+			// NSDocument handles this by presenting the error, which includes recovery options
+			// If the user does choose to Save Anyway, the doc system leaps straight onto secondary thread to
+			// accomplish it, without calling this method again.
+			// Thus we want to hang onto _contents until the overall save operation is finished, rather than
+			// just this method. The best way I can see to do that is to make the cleanup its own activity, so
+			// it runs after the end of the current one
+			[self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
+                
 #if !__has_feature(objc_arc)
-            [_additionalContent release];
+                [_additionalContent release];
 #endif
-            _additionalContent = nil;
+                _additionalContent = nil;
+                
+                activityCompletionHandler();
+			}];
             
             newCompletionHandler(error);
         };
