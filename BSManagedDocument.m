@@ -299,8 +299,7 @@
 
 - (id)contentsForURL:(NSURL *)url ofType:(NSString *)typeName saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)outError;
 {
-    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
-    
+    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread (operation %u to: %@)", NSStringFromSelector(_cmd), (unsigned)saveOperation, [url path]);
     
     // Grab additional content that a subclass might provide
     id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:outError];
