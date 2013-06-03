@@ -568,18 +568,34 @@
         // Kick off async saving work
         [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
             
-            // Cleanup
+            // If the save failed, it might be an error the user can recover from.
+			// e.g. the dreaded "file modified by another application"
+			// NSDocument handles this by presenting the error, which includes recovery options
+			// If the user does choose to Save Anyway, the doc system leaps straight onto secondary thread to
+			// accomplish it, without calling this method again.
+			// Thus we want to hang onto _contents until the overall save operation is finished, rather than
+			// just this method. The best way I can see to do that is to make the cleanup its own activity, so
+			// it runs after the end of the current one
+			[self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
+				
 #if !__has_feature(objc_arc)
-            [_contents release];
+				[_contents release];
 #endif
-            _contents = nil;
-            
+				_contents = nil;
+				
+				activityCompletionHandler();
+			}];
+			
+			
+            // Clean up our custom autosaved contents directory if appropriate
             if (!error &&
                 (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation || saveOperation == NSSaveAsOperation))
             {
                 [self deleteAutosavedContentsTempDirectory];
             }
             
+			
+			// And can finally declare we're done
             fileAccessCompletionHandler();
             if (completionHandler) completionHandler(error);
         }];
