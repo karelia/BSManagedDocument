@@ -540,7 +540,7 @@
     // At first glance, -performActivityWithSynchronousWaiting:usingBlock: seems the right way to do that. But turns out:
     //  * super is documented to use -performAsynchronousFileAccessUsingBlock: internally
     //  * Autosaving (as tested on 10.7) is declared to the system as *file access*, rather than an *activity*, so a regular save won't block the UI waiting for autosave to finish
-    //  * If autosaving while quitting, calling -performActivity… here resuls in deadlock
+    //  * If autosaving while quitting, calling -performActivity… here results in deadlock
     [self performAsynchronousFileAccessUsingBlock:^(void (^fileAccessCompletionHandler)(void)) {
         
         NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
@@ -575,16 +575,28 @@
 			// accomplish it, without calling this method again.
 			// Thus we want to hang onto _contents until the overall save operation is finished, rather than
 			// just this method. The best way I can see to do that is to make the cleanup its own activity, so
-			// it runs after the end of the current one
-			[self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
-				
+			// it runs after the end of the current one. Unfortunately there's no guarantee anyone's been
+            // thoughtful enough to register this as an activity (autosave, I'm looking at you), so only rely
+            // on it if there actually is a recoverable error
+			if ([error recoveryAttempter])
+            {
+                [self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
+                    
 #if !__has_feature(objc_arc)
-				[_contents release];
+                    [_contents release];
 #endif
-				_contents = nil;
-				
-				activityCompletionHandler();
-			}];
+                    _contents = nil;
+                    
+                    activityCompletionHandler();
+                }];
+            }
+            else
+            {
+#if !__has_feature(objc_arc)
+                [_contents release];
+#endif
+                _contents = nil;
+            }
 			
 			
             // Clean up our custom autosaved contents directory if appropriate
