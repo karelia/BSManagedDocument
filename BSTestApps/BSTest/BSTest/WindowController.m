@@ -32,7 +32,7 @@
 
 }
 
-- (IBAction)addFile:(id)sender {
+- (IBAction)addAFile:(id)sender {
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
 
     [openPanel setAllowedFileTypes:@[@"public.plain-text"]];
