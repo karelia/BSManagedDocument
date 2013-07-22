@@ -21,6 +21,11 @@
 #import "BSManagedDocument.h"
 
 
+@interface BSManagedDocument ()
+@property(nonatomic, copy) NSURL *autosavedContentsTempDirectoryURL;
+@end
+
+
 @implementation BSManagedDocument
 
 #pragma mark UIManagedDocument-inspired methods
@@ -45,19 +50,19 @@
         __block NSManagedObjectContext *context;
         if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)])
         {
-            context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+            context = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
         }
         else
         {
             // On 10.6, context MUST be created on the thread/queue that's going to use it
             if ([NSThread isMainThread])
             {
-                context = [[NSManagedObjectContext alloc] init];
+                context = [[self.class.managedObjectContextClass alloc] init];
             }
             else
             {
                 dispatch_sync(dispatch_get_main_queue(), ^{
-                    context = [[NSManagedObjectContext alloc] init];
+                    context = [[self.class.managedObjectContextClass alloc] init];
                 });
             }
         }
@@ -80,7 +85,7 @@
     // Need 10.7+ to support parent context
     if ([context respondsToSelector:@selector(setParentContext:)])
     {
-        NSManagedObjectContext *parentContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+        NSManagedObjectContext *parentContext = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
         
         [parentContext performBlockAndWait:^{
             [parentContext setUndoManager:nil]; // no point in it supporting undo
@@ -112,6 +117,9 @@
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
 }
+
+// Having this method is a bit of a hack for Sandvox's benefit. I intend to remove it in favour of something neater
++ (Class)managedObjectContextClass; { return [NSManagedObjectContext class]; }
 
 - (NSManagedObjectModel *)managedObjectModel;
 {
@@ -179,6 +187,12 @@
 
 #pragma mark Lifecycle
 
+- (void)close;
+{
+    [super close];
+    [self deleteAutosavedContentsTempDirectory];
+}
+
 // It's simpler to wrap the whole method in a conditional test rather than using a macro for each line.
 #if ! __has_feature(objc_arc)
 - (void)dealloc;
@@ -193,7 +207,7 @@
 }
 #endif
 
-#pragma mark Reading From and Writing to URLs
+#pragma mark Reading Document Data
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)outError
 {
@@ -213,9 +227,27 @@
         // NSPersistentDocument states: "Revert resets the document’s managed object context. Objects are subsequently loaded from the persistent store on demand, as with opening a new document."
         // I've found for atomic stores that -reset only rolls back to the last loaded or saved version of the store; NOT what's actually on disk
         // To force it to re-read from disk, the only solution I've found is removing and re-adding the persistent store
-        if (![[[self managedObjectContext] persistentStoreCoordinator] removePersistentStore:_store error:outError])
+        NSManagedObjectContext *context = self.managedObjectContext;
+        if ([context respondsToSelector:@selector(parentContext)])
         {
-            return NO;
+            // In my testing, HAVE to do the removal using parent's private queue. Otherwise, it deadlocks, trying to acquire a _PFLock
+            NSManagedObjectContext *parent = context.parentContext;
+            while (parent)
+            {
+                context = parent;   parent = context.parentContext;
+            }
+            
+            __block BOOL result;
+            [context performBlockAndWait:^{
+                result = [context.persistentStoreCoordinator removePersistentStore:_store error:outError];
+            }];
+        }
+        else
+        {
+            if (![context.persistentStoreCoordinator removePersistentStore:_store error:outError])
+            {
+                return NO;
+            }
         }
 
 #if !__has_feature(objc_arc)
@@ -254,56 +286,345 @@
     return result;
 }
 
-- (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
-{
-    NSAssert(_additionalContent == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
-    
-    
-    /* The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
-     */
-    
-    
-    // Stash additional content temporarily into an ivar so -writeToURL:… can access it from the worker thread
-    NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
-    _additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:&error];
+#pragma mark Writing Document Data
 
-    if (!_additionalContent)
+- (id)contentsForURL:(NSURL *)url ofType:(NSString *)typeName saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)outError;
+{
+    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread (operation %u to: %@)", NSStringFromSelector(_cmd), (unsigned)saveOperation, [url path]);
+    
+    // Grab additional content that a subclass might provide
+    id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:outError];
+    if (!additionalContent) return nil;
+    
+    
+    // On 10.7+, save the main context, ready for parent to be saved in a moment
+    NSManagedObjectContext *context = self.managedObjectContext;
+    if ([context respondsToSelector:@selector(parentContext)])
     {
-        NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
-        if (completionHandler) completionHandler(error);
-        return;
+        if (![context save:outError]) additionalContent = nil;
     }
     
-#if !__has_feature(objc_arc)
-    [_additionalContent retain];
-#endif
     
-    
-    // Completion handler *has* to run at some point, so extend it to do cleanup for us
-    void (^originalCompletionHandler)(NSError *) = completionHandler;
-	completionHandler = ^(NSError *error) {
+    // What we consider to be "contents" is actually a worker block
+    BOOL (^contents)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
         
-#if !__has_feature(objc_arc)
-        [_additionalContent release];
-#endif
-        _additionalContent = nil;
+        // For the first save of a document, create the folders on disk before we do anything else
+        // Then setup persistent store appropriately
+        BOOL result = YES;
+        NSURL *storeURL = [self.class persistentStoreURLForDocumentURL:url];
         
-        if (originalCompletionHandler) originalCompletionHandler(error);
+        if (!_store)
+        {
+            result = [self createPackageDirectoriesAtURL:url
+                                                  ofType:typeName
+                                        forSaveOperation:saveOperation
+                                     originalContentsURL:originalContentsURL
+                                                   error:error];
+            if (!result) return NO;
+            
+            result = [self configurePersistentStoreCoordinatorForURL:storeURL
+                                                              ofType:typeName
+                                                  modelConfiguration:nil
+                                                        storeOptions:nil
+                                                               error:error];
+            if (!result) return NO;
+        }
+        else if (saveOperation == NSSaveAsOperation)
+        {
+            result = [self createPackageDirectoriesAtURL:url
+                                                  ofType:typeName
+                                        forSaveOperation:saveOperation
+                                     originalContentsURL:originalContentsURL
+                                                   error:error];
+            if (!result) return NO;
+            
+            /*  Save As for an existing store should be special, migrating the store instead of saving
+             However, in our testing it can cause the next save to blow up if you go:
+             
+             1. New doc
+             2. Autosave
+             3. Save (As)
+             4. Save
+             
+             The last step will throw an exception claiming "Object's persistent store is not reachable from this NSManagedObjectContext's coordinator".
+             
+             
+             NSPersistentStoreCoordinator *coordinator = [_store persistentStoreCoordinator];
+             
+             [coordinator lock]; // so it knows it's in use
+             @try
+             {
+             NSPersistentStore *migrated = [coordinator migratePersistentStore:_store
+             toURL:storeURL
+             options:nil
+             withType:[self persistentStoreTypeForFileType:typeName]
+             error:error];
+             
+             if (!migrated) return NO;
+             
+             #if ! __has_feature(objc_arc)
+             [migrated retain];
+             [_store release];
+             #endif
+             
+             _store = migrated;
+             }
+             @finally
+             {
+             [coordinator unlock];
+             }
+             */
+            
+            // Instead, we shall fallback to copying the store to the new location
+            // -writeStoreContent… routine will adjust store URL for us
+            if (![[NSFileManager defaultManager] copyItemAtURL:[self.class persistentStoreURLForDocumentURL:self.mostRecentlySavedFileURL]
+                                                         toURL:storeURL
+                                                         error:error]) return NO;
+        }
+        else
+        {
+            if (self.class.autosavesInPlace)
+            {
+                if (saveOperation == NSAutosaveElsewhereOperation)
+                {
+                    // Special-case autosave-elsewhere for 10.7+ documents that have been saved
+                    // e.g. reverting a doc that has unautosaved changes
+                    // The system asks us to autosave it to some temp location before closing
+                    // CAN'T save-in-place to achieve that, since the doc system is expecting us to leave the original doc untouched, ready to load up as the "reverted" version
+                    // But the doc system also asks to do this when performing a Save As operation, and choosing to discard unsaved edits to the existing doc. In which case the SQLite store moves out underneath us and we blow up shortly after
+                    // Doc system apparently considers it fine to fail at this, since it passes in NULL as the error pointer
+                    // With great sadness and wretchedness, that's the best workaround I have for the moment
+                    NSURL *fileURL = self.fileURL;
+                    if (fileURL)
+                    {
+                        NSURL *autosaveURL = self.autosavedContentsFileURL;
+                        if (!autosaveURL)
+                        {
+                            // Make a copy of the existing doc to a location we control first
+                            NSURL *autosaveTempDirectory = self.autosavedContentsTempDirectoryURL;
+                            NSAssert(autosaveTempDirectory == nil, @"Somehow have a temp directory, but no knowledge of a doc inside it");
+                            
+                            autosaveTempDirectory = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory
+                                                                                           inDomain:NSUserDomainMask
+                                                                                  appropriateForURL:fileURL
+                                                                                             create:YES
+                                                                                              error:error];
+                            if (!autosaveTempDirectory) return NO;
+                            self.autosavedContentsTempDirectoryURL = autosaveTempDirectory;
+                            
+                            autosaveURL = [autosaveTempDirectory URLByAppendingPathComponent:fileURL.lastPathComponent];
+                            if (![self writeBackupToURL:autosaveURL error:error]) return NO;
+                            
+                            self.autosavedContentsFileURL = autosaveURL;
+                        }
+                        
+                        // Bring the autosaved doc up-to-date
+                        result = [self writeStoreContentToURL:[self.class persistentStoreURLForDocumentURL:autosaveURL]
+                                                        error:error];
+                        if (!result) return NO;
+                        
+                        result = [self writeAdditionalContent:additionalContent
+                                                        toURL:autosaveURL
+                                          originalContentsURL:originalContentsURL
+                                                        error:error];
+                        if (!result) return NO;
+                        
+                        
+                        // Then copy that across to the final URL
+                        return [self writeBackupToURL:url error:error];
+                    }
+                }
+            }
+            else
+            {
+                if (saveOperation != NSSaveOperation && saveOperation != NSAutosaveInPlaceOperation)
+                {
+                    if (![storeURL checkResourceIsReachableAndReturnError:NULL])
+                    {
+                        result = [self createPackageDirectoriesAtURL:url
+                                                              ofType:typeName
+                                                    forSaveOperation:saveOperation
+                                                 originalContentsURL:originalContentsURL
+                                                               error:error];
+                        if (!result) return NO;
+                        
+                        // Fake a placeholder file ready for the store to save over
+                        if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
+                    }
+                }
+            }
+        }
+        
+        
+        // Right, let's get on with it!
+        if (![self writeStoreContentToURL:storeURL error:error]) return NO;
+        
+            result = [self writeAdditionalContent:additionalContent toURL:url originalContentsURL:originalContentsURL error:error];
+            
+            if (result)
+            {
+                // Update package's mod date. Two circumstances where this is needed:
+                //  user requests a save when there's no changes; SQLite store doesn't bother to touch the disk in which case
+                //  saving where +storeContentName is non-nil; that folder's mod date updates, but the overall package needs prompting
+                // Seems simplest to just apply this logic all the time
+                NSError *error;
+                if (![url setResourceValue:[NSDate date] forKey:NSURLContentModificationDateKey error:&error])
+                {
+                    NSLog(@"Updating package mod date failed: %@", error);  // not critical, so just log it
+                }
+            }
+        
+        
+        // Restore persistent store URL after Save To-type operations. Even if save failed (just to be on the safe side)
+        if (saveOperation == NSSaveToOperation)
+        {
+            if (![[_store persistentStoreCoordinator] setURL:originalContentsURL forPersistentStore:_store])
+            {
+                NSLog(@"Failed to reset store URL after Save To Operation");
+            }
+        }
+        
+        
+        return result;
     };
     
+#if !__has_feature(objc_arc)
+    return [[contents copy] autorelease];
+#else
+    return [contents copy];
+#endif
+}
+
+- (BOOL)createPackageDirectoriesAtURL:(NSURL *)url
+                               ofType:(NSString *)typeName
+                     forSaveOperation:(NSSaveOperationType)saveOperation
+                  originalContentsURL:(NSURL *)originalContentsURL
+                                error:(NSError **)error;
+{
+    // Create overall package
+    NSDictionary *attributes = [self fileAttributesToWriteToURL:url
+                                                         ofType:typeName
+                                               forSaveOperation:saveOperation
+                                            originalContentsURL:originalContentsURL
+                                                          error:error];
+    if (!attributes) return NO;
     
-    // Save the main context on the main thread before handing off to the background
-    NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread", NSStringFromSelector(_cmd));
+    BOOL result = [[NSFileManager defaultManager] createDirectoryAtPath:[url path]
+                                            withIntermediateDirectories:NO
+                                                             attributes:attributes
+                                                                  error:error];
+    if (!result) return NO;
     
-    if ([[self managedObjectContext] save:&error])
+    // Create store content folder too
+    NSString *storeContent = self.class.storeContentName;
+    if (storeContent)
     {
-        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:completionHandler];
+        NSURL *storeContentURL = [url URLByAppendingPathComponent:storeContent];
+        
+        result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
+                                           withIntermediateDirectories:NO
+                                                            attributes:attributes
+                                                                 error:error];
+        if (!result) return NO;
     }
-    else
+    
+    // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
+    [self setBundleBitForDirectoryAtURL:url];
+    
+    return YES;
+}
+
+- (void)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation completionHandler:(void (^)(NSError *))completionHandler
+{
+    // Can't touch _additionalContent etc. until existing save has finished
+    // At first glance, -performActivityWithSynchronousWaiting:usingBlock: seems the right way to do that. But turns out:
+    //  * super is documented to use -performAsynchronousFileAccessUsingBlock: internally
+    //  * Autosaving (as tested on 10.7) is declared to the system as *file access*, rather than an *activity*, so a regular save won't block the UI waiting for autosave to finish
+    //  * If autosaving while quitting, calling -performActivity… here results in deadlock
+    [self performAsynchronousFileAccessUsingBlock:^(void (^fileAccessCompletionHandler)(void)) {
+        
+        NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+        
+        
+        // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
+        NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
+        _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
+        
+        if (!_contents)
+        {
+            NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
+            
+            // The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
+            fileAccessCompletionHandler();
+            if (completionHandler) completionHandler(error);
+            return;
+        }
+        
+#if !__has_feature(objc_arc)
+        [_contents retain];
+#endif
+        
+        
+        // Kick off async saving work
+        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
+            
+            // If the save failed, it might be an error the user can recover from.
+			// e.g. the dreaded "file modified by another application"
+			// NSDocument handles this by presenting the error, which includes recovery options
+			// If the user does choose to Save Anyway, the doc system leaps straight onto secondary thread to
+			// accomplish it, without calling this method again.
+			// Thus we want to hang onto _contents until the overall save operation is finished, rather than
+			// just this method. The best way I can see to do that is to make the cleanup its own activity, so
+			// it runs after the end of the current one. Unfortunately there's no guarantee anyone's been
+            // thoughtful enough to register this as an activity (autosave, I'm looking at you), so only rely
+            // on it if there actually is a recoverable error
+			if ([error recoveryAttempter])
+            {
+                [self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
+                    
+#if !__has_feature(objc_arc)
+                    [_contents release];
+#endif
+                    _contents = nil;
+                    
+                    activityCompletionHandler();
+                }];
+            }
+            else
+            {
+#if !__has_feature(objc_arc)
+                [_contents release];
+#endif
+                _contents = nil;
+            }
+			
+			
+            // Clean up our custom autosaved contents directory if appropriate
+            if (!error &&
+                (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation || saveOperation == NSSaveAsOperation))
+            {
+                [self deleteAutosavedContentsTempDirectory];
+            }
+            
+			
+			// And can finally declare we're done
+            fileAccessCompletionHandler();
+            if (completionHandler) completionHandler(error);
+        }];
+    }];
+}
+
+- (BOOL)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError **)outError;
+{
+    BOOL result = [super saveToURL:url ofType:typeName forSaveOperation:saveOperation error:outError];
+    
+    if (result &&
+        (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation || saveOperation == NSSaveAsOperation))
     {
-        NSAssert(error, @"-[NSManagedObjectContext save:] failed with a nil error");
-        completionHandler(error);
+        [self deleteAutosavedContentsTempDirectory];
     }
+    
+    return result;
 }
 
 /*	Regular Save operations can write directly to the existing document since Core Data provides atomicity for us
@@ -322,6 +643,8 @@
         if (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation ||
             (saveOperation == NSAutosaveElsewhereOperation && [absoluteURL isEqual:[self autosavedContentsFileURL]]))
         {
+            NSURL *backupURL = nil;
+            
 			// As of 10.8, need to make a backup of the document when saving in-place
 			// Unfortunately, it turns out 10.7 includes -backupFileURL, just that it's private. Checking AppKit number seems to be our best bet, and I have to hardcode that since 10_8 is not defined in the SDK yet. (1187 was found simply by looking at the GM)
 			if (NSAppKitVersionNumber >= 1187 &&
@@ -329,7 +652,7 @@
 				(saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation) &&
 				[[self class] preservesVersions])			// otherwise backupURL has a different meaning
 			{
-				NSURL *backupURL = [self backupFileURL];
+				backupURL = [self backupFileURL];
 				if (backupURL)
 				{
 					if (![self writeBackupToURL:backupURL error:outError])
@@ -355,10 +678,25 @@
                        originalContentsURL:[self fileURL]
                                      error:outError];
             
-            // The -write… method maybe wasn't to know that it's writing to the live document, so might have modified it. #179730
-            // We can patch up a bit by updating modification date so user doesn't get baffling document-edited warnings again!
+            
             if (!result)
             {
+                // Clean up backup if one was made
+                // If the failure was actualy NSUserCancelledError thanks to
+                // autosaving being implicitly cancellable and a subclass deciding
+                // to bail out, this HAS to be done otherwise the doc system will
+                // weirdly complain that a file by the same name already exists
+                if (backupURL)
+                {
+                    NSError *error;
+                    if (![[NSFileManager defaultManager] removeItemAtURL:backupURL error:&error])
+                    {
+                        NSLog(@"Unable to remove backup after failed write: %@", error);
+                    }
+                }
+                
+                // The -write… method maybe wasn't to know that it's writing to the live document, so might have modified it. #179730
+                // We can patch up a bit by updating modification date so user doesn't get baffling document-edited warnings again!
                 NSDate *modDate;
                 if ([absoluteURL getResourceValue:&modDate forKey:NSURLContentModificationDateKey error:NULL])
                 {
@@ -382,7 +720,8 @@
 
 - (BOOL)writeBackupToURL:(NSURL *)backupURL error:(NSError **)outError;
 {
-	return [[NSFileManager defaultManager] copyItemAtURL:[self fileURL] toURL:backupURL error:outError];
+    NSURL *source = self.mostRecentlySavedFileURL;
+	return [[NSFileManager defaultManager] copyItemAtURL:source toURL:backupURL error:outError];
 }
 
 - (BOOL)writeToURL:(NSURL *)inURL
@@ -391,168 +730,30 @@
 originalContentsURL:(NSURL *)originalContentsURL
              error:(NSError **)error
 {
-    // Can't write on worker thread if caller somehow bypassed additional content & saving main context
-    if (!_additionalContent)
+    // Grab additional content before proceeding. This should *only* happen when writing entirely on the main thread
+    // (e.g. Using one of the old synchronous -save… APIs. Note: duplicating a document calls -writeSafely… directly)
+    // To have gotten here on any thread but the main one is a programming error and unworkable, so we throw an exception
+    if (!_contents)
     {
-		// For example, duplicating a document calls -writeSafely… directly. Also, using the old synchronous saving APIs bring you to this point
-        if ([NSThread isMainThread])
-        {
-            _additionalContent = [self additionalContentForURL:inURL saveOperation:saveOp error:error];
-            if (!_additionalContent) return NO;
-            
-            // Worried that _additionalContent hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
-            
-            // On 10.7+, save the main context, ready for parent to be saved in a moment
-            NSManagedObjectContext *context = [self managedObjectContext];
-            if ([context respondsToSelector:@selector(parentContext)])
-            {
-                if (![context save:error])
-                {
-                    _additionalContent = nil;
-                    return NO;
-                }
-            }
-            
-            // And now we're ready to write for real
-            BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
-            
-            
-            // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
-            _additionalContent = nil;
-            return result;
-        }
-        else
-        {
-            [NSException raise:NSInvalidArgumentException format:@"Attempt to write document on background thread, bypassing usual save methods"];
-            return NO;
-        }
+		_contents = [self contentsForURL:inURL ofType:typeName saveOperation:saveOp error:error];
+        if (!_contents) return NO;
+        
+        // Worried that _contents hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
+        
+        
+        // And now we're ready to write for real
+        BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
+        
+        
+        // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
+        _contents = nil;
+        return result;
     }
     
     
-    // For the first save of a document, create the folders on disk before we do anything else
-    BOOL result = YES;
-    if (saveOp == NSSaveAsOperation ||
-        (saveOp == NSAutosaveOperation && ![[self autosavedContentsFileURL] isEqual:inURL]))
-    {
-        NSDictionary *attributes = [self fileAttributesToWriteToURL:inURL
-                                                             ofType:typeName
-                                                   forSaveOperation:saveOp
-                                                originalContentsURL:originalContentsURL
-                                                              error:error];
-        
-        if (!attributes) return NO;
-        
-        result = [[NSFileManager defaultManager] createDirectoryAtPath:[inURL path]
-                                           withIntermediateDirectories:NO
-                                                            attributes:attributes
-                                                                 error:error];
-        
-        if (result)
-        {
-            // Create store content folder too
-            NSString *storeContent = [[self class] storeContentName];
-            if (storeContent)
-            {
-                NSURL *storeContentURL = [inURL URLByAppendingPathComponent:storeContent];
-                
-                result = [[NSFileManager defaultManager] createDirectoryAtPath:[storeContentURL path]
-                                                   withIntermediateDirectories:NO
-                                                                    attributes:attributes
-                                                                         error:error];
-            }
-        }
-        
-        // Set the bundle bit for good measure, so that docs won't appear as folders on Macs without your app installed. Don't care if it fails
-        if (result) [self setBundleBitForDirectoryAtURL:inURL];
-    }
-    
-    
-    
-    NSURL *storeURL = [[self class] persistentStoreURLForDocumentURL:inURL];
-    
-    // Setup persistent store appropriately
-    if (!_store)
-    {
-        if (![self configurePersistentStoreCoordinatorForURL:storeURL
-                                                      ofType:typeName
-                                          modelConfiguration:nil
-                                                storeOptions:nil
-                                                       error:error])
-        {
-            return NO;
-        }
-    }
-    else if (saveOp == NSSaveAsOperation)
-    {
-        /* Save As for an existing store is special. Migrates the store instead of saving
-         */
-        
-        if (![self updateMetadataForPersistentStore:_store error:error]) return NO;
-        
-        NSPersistentStoreCoordinator *coordinator = [_store persistentStoreCoordinator];
-        
-        [coordinator lock]; // so it knows it's in use
-        @try
-        {
-            NSPersistentStore *migrated = [coordinator migratePersistentStore:_store
-                                                                        toURL:storeURL
-                                                                      options:nil
-                                                                     withType:[self persistentStoreTypeForFileType:typeName]
-                                                                        error:error];
-            
-            if (!migrated) return NO;
-            
-#if ! __has_feature(objc_arc)
-            [migrated retain];
-            [_store release];
-#endif
-
-            _store = migrated;
-            
-            return [self writeAdditionalContent:_additionalContent
-                                          toURL:inURL
-                            originalContentsURL:originalContentsURL
-                                          error:error];
-        }
-        @finally
-        {
-            [coordinator unlock];
-        }
-    }
-    else if (saveOp != NSSaveOperation && saveOp != NSAutosaveInPlaceOperation)
-    {
-        // Fake a placeholder file ready for the store to save over
-        if (![storeURL checkResourceIsReachableAndReturnError:NULL])
-        {
-            if (![[NSData data] writeToURL:storeURL options:0 error:error]) return NO;
-        }
-        
-        // Make sure existing store is saving to right place
-        [[_store persistentStoreCoordinator] setURL:storeURL forPersistentStore:_store];
-    }
-    
-    
-    // Right, let's get on with it!
-    result = [self writeStoreContentToURL:storeURL error:error];
-    if (!result) return NO;
-    
-    if (result)
-    {
-        result = [self writeAdditionalContent:_additionalContent toURL:inURL originalContentsURL:originalContentsURL error:error];
-    }
-    
-    
-    // Restore persistent store URL after Save To-type operations. Even if save failed (just to be on the safe side)
-    if (saveOp == NSSaveToOperation)
-    {
-        if (![[_store persistentStoreCoordinator] setURL:originalContentsURL forPersistentStore:_store])
-        {
-            NSLog(@"Failed to reset store URL after Save To Operation");
-        }
-    }
-    
-    
-    return result;
+    // We implement contents as a block which is called to perform the writing
+    BOOL (^contentsBlock)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = _contents;
+    return contentsBlock(inURL, saveOp, originalContentsURL, error);
 }
 
 - (void)setBundleBitForDirectoryAtURL:(NSURL *)url;
@@ -630,18 +831,22 @@ originalContentsURL:(NSURL *)originalContentsURL
     //NSNumber *writable;
     //result = [URL getResourceValue:&writable forKey:NSURLIsWritableKey error:&error];
     
-    BOOL result = [[NSFileManager defaultManager] isWritableFileAtPath:[storeURL path]];
-    if (result)
+    if ([[NSFileManager defaultManager] isWritableFileAtPath:[storeURL path]])
     {
-        result = [context save:error];
+        // Ensure store is saving to right location
+        if ([context.persistentStoreCoordinator setURL:storeURL forPersistentStore:_store])
+        {
+            return [context save:error];
+        }
     }
-    else if (error)
+    
+    if (error)
     {
         // Generic error. Doc/error system takes care of supplying a nice generic message to go with it
         *error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileWriteNoPermissionError userInfo:nil];
     }
     
-    return result;
+    return NO;
 }
 
 #pragma mark NSDocument
@@ -687,20 +892,6 @@ originalContentsURL:(NSURL *)originalContentsURL
 + (BOOL)autosavesInPlace { return [NSDocument respondsToSelector:_cmd]; }
 + (BOOL)preservesVersions { return [self autosavesInPlace]; }
 
-- (BOOL)saveToURL:(NSURL *)absoluteURL ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError * __autoreleasing*)outError
-{
-    if (_managedObjectContext) {
-        NSError* mainContextError = nil;
-        if(![_managedObjectContext save:&mainContextError]) {
-            if (outError) {
-                *outError = mainContextError;
-            }
-            return NO;
-        }
-    }
-    return [super saveToURL:absoluteURL ofType:typeName forSaveOperation:saveOperation error:outError];
-}
-
 - (void)setAutosavedContentsFileURL:(NSURL *)absoluteURL;
 {
     [super setAutosavedContentsFileURL:absoluteURL];
@@ -719,11 +910,39 @@ originalContentsURL:(NSURL *)originalContentsURL
     return result;
 }
 
+/*
+ When asked to autosave an existing doc elsewhere, we do so via an
+ intermedate, temporary copy of the doc. This code tracks that temp folder
+ so it can be deleted when no longer in use.
+ */
+
+@synthesize autosavedContentsTempDirectoryURL = _autosavedContentsTempDirectoryURL;
+
+- (void)deleteAutosavedContentsTempDirectory;
+{
+    NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
+    if (autosaveTempDir)
+    {
+#if ! __has_feature(objc_arc)
+        [[autosaveTempDir retain] autorelease];
+#endif
+        self.autosavedContentsTempDirectoryURL = nil;
+        
+        NSError *error;
+        if (![[NSFileManager defaultManager] removeItemAtURL:autosaveTempDir error:&error])
+        {
+            NSLog(@"Unable to remove temporary directory: %@", error);
+        }
+    }
+}
+
 #pragma mark Reverting Documents
 
 - (BOOL)revertToContentsOfURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)outError;
 {
-    // Tear down old windows
+    // Tear down old windows. Wrap in an autorelease pool to get us much torn down before the reversion as we can
+    @autoreleasepool
+    {
     NSArray *controllers = [[self windowControllers] copy]; // we're sometimes handed underlying mutable array. #156271
     for (NSWindowController *aController in controllers)
     {
@@ -733,17 +952,75 @@ originalContentsURL:(NSURL *)originalContentsURL
 #if ! __has_feature(objc_arc)
     [controllers release];
 #endif
+    }
 
 
     @try
     {
-        return [super revertToContentsOfURL:absoluteURL ofType:typeName error:outError];
+        if (![super revertToContentsOfURL:absoluteURL ofType:typeName error:outError]) return NO;
+        [self deleteAutosavedContentsTempDirectory];
+        
+        return YES;
     }
     @finally
     {
         [self makeWindowControllers];
         [self showWindows];
     }
+}
+
+#pragma mark Duplicating Documents
+
+- (NSDocument *)duplicateAndReturnError:(NSError **)outError;
+{
+    // If the doc is brand new, have to force the autosave to write to disk
+    if (!self.fileURL && !self.autosavedContentsFileURL && !self.hasUnautosavedChanges)
+    {
+        [self updateChangeCount:NSChangeDone];
+        NSDocument *result = [self duplicateAndReturnError:outError];
+        [self updateChangeCount:NSChangeUndone];
+        return result;
+    }
+    
+    
+    // Make sure copy on disk is up-to-date
+    if (![self fakeSynchronousAutosaveAndReturnError:outError]) return nil;
+    
+    
+    // Let super handle the overall duplication so it gets the window-handling
+    // right. But use custom writing logic that actually copies the existing doc
+    BOOL (^contentsBlock)(NSURL*, NSSaveOperationType, NSURL*, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
+        return [self writeBackupToURL:url error:error];
+    };
+    
+    _contents = contentsBlock;
+    NSDocument *result = [super duplicateAndReturnError:outError];
+    _contents = nil;
+    
+    return result;
+}
+
+/*  Approximates a synchronous version of -autosaveDocumentWithDelegate:didAutosaveSelector:contextInfo:    */
+- (BOOL)fakeSynchronousAutosaveAndReturnError:(NSError **)outError;
+{
+    // Kick off an autosave
+    __block BOOL result = YES;
+    [self autosaveWithImplicitCancellability:NO completionHandler:^(NSError *errorOrNil) {
+        if (errorOrNil)
+        {
+            result = NO;
+            *outError = [errorOrNil copy];  // in case there's an autorelease pool
+        }
+    }];
+    
+    // Somewhat of a hack: wait for autosave to finish
+    [self performSynchronousFileAccessUsingBlock:^{ }];
+    
+#if ! __has_feature(objc_arc)
+    if (!result) [*outError autorelease];   // match the -copy above
+#endif
+    
+    return result;
 }
 
 #pragma mark Undo
