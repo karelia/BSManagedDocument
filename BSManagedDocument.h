@@ -86,11 +86,6 @@
  */
 - (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL ofType:(NSString *)fileType modelConfiguration:(NSString *)configuration storeOptions:(NSDictionary *)storeOptions error:(NSError **)error;
 
-/* Whether or not the Automatic Migration is enabled
-   Defaults to YES. Subclasses can override this to return NO to disable it.
- */
-+ (BOOL)requestsAutomaticMigration;
-
 /* Returns the Core Data store type string for the given document fileType. The default returns NSSQLiteStoreType. See NSPersistentStoreCoordinator.h for store type information.
  */
 - (NSString *)persistentStoreTypeForFileType:(NSString *)fileType;
