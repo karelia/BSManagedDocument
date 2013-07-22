@@ -7,7 +7,7 @@
 //
 
 #import <SenTestingKit/SenTestingKit.h>
-#import "BSManagedDocument.h"
+#import "Document.h"
 
 @interface BSManagedDocumentTests : SenTestCase
 @end
@@ -19,7 +19,7 @@
 #pragma mark - Set up and tear down
 
 - (void)setUp {
-    _document = [[BSManagedDocument alloc] init];
+    _document = [[Document alloc] init];    // use subclass for automatic migration
 }
 
 - (void)tearDown {

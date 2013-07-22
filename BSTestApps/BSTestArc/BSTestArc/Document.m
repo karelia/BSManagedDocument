@@ -16,4 +16,13 @@
     [self addWindowController:windowController];
 }
 
+- (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL ofType:(NSString *)fileType modelConfiguration:(NSString *)configuration storeOptions:(NSDictionary *)storeOptions error:(NSError **)error;
+{
+    NSMutableDictionary *options = [NSMutableDictionary dictionaryWithDictionary:storeOptions];
+    [options setObject:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
+    [options setObject:@YES forKey:NSInferMappingModelAutomaticallyOption];
+    
+    return [super configurePersistentStoreCoordinatorForURL:storeURL ofType:fileType modelConfiguration:configuration storeOptions:options error:error];
+}
+
 @end

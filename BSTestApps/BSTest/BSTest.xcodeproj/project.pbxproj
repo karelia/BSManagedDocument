@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		27F0B9CD179D4BB000AA0026 /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = AD93624F1681C0DF00B4FA9C /* Document.m */; };
+		27F0B9CE179D4BC100AA0026 /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = AD9362E61681E3A300B4FA9C /* WindowController.m */; };
 		AD4644A716B3EAC900839092 /* BSManagedDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = AD4644A616B3EAC900839092 /* BSManagedDocument.m */; };
 		AD4644D116B3F94100839092 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD4644D016B3F94100839092 /* SenTestingKit.framework */; };
 		AD4644D216B3F94100839092 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD93623C1681C0DF00B4FA9C /* Cocoa.framework */; };
@@ -317,6 +319,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27F0B9CE179D4BC100AA0026 /* WindowController.m in Sources */,
+				27F0B9CD179D4BB000AA0026 /* Document.m in Sources */,
 				AD4644F116B3FD5800839092 /* BSManagedDocumentTests.m in Sources */,
 				AD4644FC16B3FF5000839092 /* BSManagedDocument.m in Sources */,
 				AD46452816B40ABC00839092 /* Model.xcdatamodeld in Sources */,
