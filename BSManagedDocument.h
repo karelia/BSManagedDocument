@@ -100,6 +100,10 @@
  */
 - (BOOL)revertToContentsOfURL:(NSURL *)inAbsoluteURL ofType:(NSString *)inTypeName error:(NSError **)outError;
 
+/* An optional call out by readFromURL:error: to handle non-Core Data content in the document's file wrapper.  It is not necessary to call super.
+ */
+- (BOOL)readAdditionalContentFromURL:(NSURL *)absoluteURL error:(NSError **)error;
+
 /* An optional call out on the main thread to handle non-Core Data content in the document's file wrapper. The returned object will be passed to -writeAdditionalContent:… It is not necessary to call super.
  *  Called before any contexts are saved, so may be a good point to do some last-minute adjustments to your Core Data objects
  */
