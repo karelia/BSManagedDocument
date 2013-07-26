@@ -167,6 +167,8 @@
 
 - (NSString *)persistentStoreTypeForFileType:(NSString *)fileType { return NSSQLiteStoreType; }
 
+- (BOOL)readAdditionalContentFromURL:(NSURL *)absoluteURL error:(NSError **)error; { return YES; }
+
 - (id)additionalContentForURL:(NSURL *)absoluteURL saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
 {
 	// Need to hand back something so as not to indicate there was an error
@@ -282,6 +284,10 @@
                                                      storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
                                                             error:outError];
     
+    if (result)
+    {
+        result = [self readAdditionalContentFromURL:absoluteURL error:outError];
+    }
     
     return result;
 }
