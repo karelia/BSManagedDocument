@@ -20,37 +20,6 @@
 
   *   And of course, full support for Autosave-In-Place and Versions
 
-## Branch structure for submodules
-
-There are two branches to this repository, *ksmanageddocument* and *tests*, these
-make it easier to use the same repository for developing as well as for sharing
-the code as a Git submodule.
-
-### The ksmanageddocument branch
-
-The ksmanageddocument branch just contains the class files and this README file. It is
-the one to use if you want to add it as a submodule to your project. This should
-be treated as a readonly branch. *do not perform any development on this
-branch*.
-
-### The tests branch
-
-The tests branch contains the class files as well as Xcode projects for
-development and demonstration. This is the branch where development should be
-performed, the changes push back to the master branch cleanly through the magic
-of careful merging and cherry-picking.
-
-There are Unit Tests for the class in each of the ARC and MRC projects. These
-are not shared files, so be sure to write tests in both projects while developing.
-
-### Artefacts
-
-Sometimes, there may be artefacts left over when switching from ksmanageddocument to
-tests. These are files that are ignored by Git and are easily cleaned up
-by running
-
-    git clean -dxf
-
 ## License (BSD)
 
 Standard BSD licence.
