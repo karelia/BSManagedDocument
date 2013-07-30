@@ -1,6 +1,6 @@
 # BSManagedDocument
 
-  A document class that mimics UIManagedDocument to support Core Data in all its modern glory:
+  A document class that mimics `UIManagedDocument` to support Core Data in all its modern glory:
 
   *   Saves to a file package
 
