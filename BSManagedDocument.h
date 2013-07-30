@@ -61,32 +61,73 @@
     NSURL   *_autosavedContentsTempDirectoryURL;
 }
 
-/*  The name of folder directly inside the document which the persistent store will be saved to.
- *  The default name is @"StoreContent" to match UIManagedDocument
- *  You can override to customize, including returning nil which means the persistent store will be saved directly inside the document package with no intermediate folder
+/**
+ @return The name of the folder directly inside the document which the persistent store will be saved to.
+ 
+ The default name is `StoreContent` to match `UIManagedDocument`. You can
+ override to customize, including returning `nil` which means the persistent
+ store will be saved directly inside the document package with no intermediate
+ folder.
  */
 + (NSString *)storeContentName;
 
-/* The name for the persistent store file.
- * The default name is @"persistentStore" to match UIManagedDocument
+/**
+ @return The name for the persistent store file inside the document’s file package.
+ 
+ The default name is `persistentStore` to match `UIManagedDocument`. The store
+ is nested inside the document within the `+storeContentName` folder.
  */
 + (NSString *)persistentStoreName;
 
-/* Persistent documents always have a managed object context and a persistent store coordinator through that context.
- * A default context is created on-demand. You can override to use your own instead
- * -setManagedObjectContext: automatically sets a persistence stack for the context and uses its undo manager
+/**
+ The receiver's managed object context
+ 
+ Persistent documents always have a managed object context and a persistent
+ store coordinator through that context.
+ 
+ A default context is created on-demand. You can call `-setManagedObjectContext:`
+ to substitute your own context instead. This will automatically supply a
+ persistence stack for the context and uses its undo manager.
  */
 @property (nonatomic, strong) NSManagedObjectContext *managedObjectContext;
 
-/* Persistent documents always have a managed object model.  The default model is the union of all models in the main bundle.
+/**
+ The document's managed object model. (read-only)
+ 
+ Persistent documents always have a managed object model. The default model is
+ the union of all models in the main bundle. You can specify a configuration to
+ use with modelConfiguration. You can subclass `BSManagedDocument` to override
+ this method if you need custom behavior.
  */
 @property (nonatomic, strong, readonly) NSManagedObjectModel* managedObjectModel;
 
-/* Subclasses can override to customize the loading or creation of a persistent store to the coordinator.
+/**
+ Creates or loads the document’s persistent store.
+ 
+ @param storeURL The URL for the persistent store.
+ @param fileType The document’s file type.
+ @param configuration The managed object model configuration to use.
+ @param storeOptions The options used to configure the persistent store coordinator.
+ @param error Upon return, if a problem occurs, contains an error object that describes the problem.
+ @return `YES` if configuration is successful, otherwise `NO`.
+ 
+ You can override this method if you want customize the creation or loading of
+ the document’s persistent store. For example, you can perform post-migration
+ clean-up—if your application needs to migrate store data to use a new version
+ of the managed object model, you can override this method to make additional
+ modifications to the store after migration.
  */
 - (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL ofType:(NSString *)fileType modelConfiguration:(NSString *)configuration storeOptions:(NSDictionary *)storeOptions error:(NSError **)error;
 
-/* Returns the Core Data store type string for the given document fileType. The default returns NSSQLiteStoreType. See NSPersistentStoreCoordinator.h for store type information.
+/**
+ Returns the Core Data store type for a given document file type.
+ 
+ @param fileType The document file type.
+ @return The persistent store type for fileType.
+ 
+ Override this method to specify a persistent store type for a given document
+ type. The default returns `NSSQLiteStoreType`. See
+ `NSPersistentStoreCoordinator.h` for store type information.
  */
 - (NSString *)persistentStoreTypeForFileType:(NSString *)fileType;
 
@@ -102,26 +143,120 @@
  */
 - (BOOL)revertToContentsOfURL:(NSURL *)inAbsoluteURL ofType:(NSString *)inTypeName error:(NSError **)outError;
 
-/* An optional call out by readFromURL:error: to handle non-Core Data content in the document's file wrapper.  It is not necessary to call super.
+/**
+ Handles reading non-Core Data content in the additional content directory in the document’s file package.
+ 
+ @param absoluteURL The URL for the additional content directory in the document’s file package.
+ @param error Upon return, if a problem occurs, contains an error object that describes the problem.
+ @return `YES` if the read operation is successful, otherwise `NO`.
+ 
+ You override this method to read non-Core Data content from the additional
+ content directory in the document’s file package.
+ 
+ If you implement this method, it is invoked automatically by
+ `readFromURL:ofType:error:`.
+ 
+ There is no need to invoke `super`’s implementation.
  */
 - (BOOL)readAdditionalContentFromURL:(NSURL *)absoluteURL error:(NSError **)error;
 
-/* An optional call out on the main thread to handle non-Core Data content in the document's file wrapper. The returned object will be passed to -writeAdditionalContent:… It is not necessary to call super.
- *  Called before any contexts are saved, so may be a good point to do some last-minute adjustments to your Core Data objects
+/**
+ Handles writing non-Core Data content to the additional content directory in the document’s file package.
+ 
+ @param absoluteURL The URL for the additional content directory in the document’s file package.
+ @param saveOperation The type of save operation being performed.
+ @param error Upon return, if a problem occurs, contains an error object that describes the problem.
+ @return An object that contains the additional content for the document at `absoluteURL`, or `nil` if there is a problem.
+ 
+ You override this method to perform to manage non-Core Data content to be
+ stored in the additional content directory in the document’s file package.
+ 
+ If you implement this method, it is invoked automatically by `BSManagedDocument`
+ while saving. The returned object is passed to
+ `-writeAdditionalContent:toURL:originalContentsURL:error:`.
+ 
+ Called before any contexts are saved, so this may be a good point to do some
+ last-minute adjustments to your Core Data objects.
+ 
+ There is no need to invoke `super`’s implementation.
+ 
+ ### Special Considerations
+ 
+ A return value of `nil` indicates an error condition. To avoid generating an
+ exception, you must return a value from this method. If it is not always the
+ case that there will be additional content, you should return a sentinel value
+ (for example, an `NSNull` instance) that you check for in
+ `-writeAdditionalContent:toURL:originalContentsURL:error:`.
+ 
+ The object returned from this method is passed to
+ `-writeAdditionalContent:toURL:originalContentsURL:error:`. Because
+ `-writeAdditionalContent:toURL:originalContentsURL:error:` is likely executed
+ on a different thread, you must ensure that the object you return is
+ thread-safe. For example, you might return an `NSData` object containing an
+ archive of the state you want to capture.
  */
 - (id)additionalContentForURL:(NSURL *)absoluteURL saveOperation:(NSSaveOperationType)saveOperation error:(NSError **)error;
 
-/* An optional call out by writeToURL:ofType:forSaveOperation:originalContentsURL:error: to handle non-Core Data content in the document's package. The Core Data content is handled by the primary NSDocument -writeToURL:ofType:forSaveOperation:originalContentsURL:error: method.  It is not necessary to call super.
- * This method is called after context(s) have been saved to disk, so the document is already partially written. You should avoid returning NO as that reports an error to the user, but leaves the document in a partially updated state.
- * You should NEVER attempt to access the main context's objects or other document state from this methods, as user interaction may have been unblocked, causing the state to be out of sync with that being written. Instead, override -additionalContentForURL:… to capture such information
+/**
+ Handles writing non-Core Data content to the document’s file package.
+ 
+ @param content An object that represents the additional content for the document. This is the object returned from `-additionalContentForURL:error:`.
+ @param absoluteURL The URL to which to write the additional content.
+ @param absoluteOriginalContentsURL The current URL of the document that is being saved.
+ @param error Upon return, if a problem occurs, contains an error object that describes the problem.
+ @return `YES` if the write operation is successful, otherwise `NO`.
+ 
+ You override this method to perform to write non-Core Data content in the additional content directory in the document’s file package. There are several issues to consider:
+ 
+ * You should typically implement this method only if you have also implemented
+ `-additionalContentForURL:error:`.
+ * Because this method is executed asynchronously, it is possible that the
+ document’s state may be different from that at which the save operation was
+ initiated. If you need to capture the document state at save time, you should
+ do so in `-additionalContentForURL:error:`.
+ * If you implement this method, it is invoked automatically by
+ `-writeContents:andAttributes:safelyToURL:forSaveOperation:error:`.
+ * There is no need to invoke `super`’s implementation.
+ 
+ ### Special Considerations
+ 
+ This method is called after context(s) have been saved to disk, so the document
+ is already partially written. You should avoid returning `NO` if possible, as
+ that reports an error to the user, but leaves the document in a partially
+ updated state.
  */
 - (BOOL)writeAdditionalContent:(id)content toURL:(NSURL *)absoluteURL originalContentsURL:(NSURL *)absoluteOriginalContentsURL error:(NSError **)error;
 
-/* Called just before the context is saved, giving you a chance to adjust the store's metadata. Default implementation leaves the existing metadata untouched and returns YES. You should only override to return NO if storing the metadata went wrong in a critical way that stops the doc from being saved. Called on an arbitrary thread, so up to you to bounce over to the correct one if needed.
+/**
+ Handles updating the persistent store's metadata.
+ 
+ @param store The persistent store being saved.
+ @param error Upon return, if a problem occurs, contains an error object that describes the problem.
+ @return `YES` if the update is successful, otherwise `NO`.
+ 
+ Called just before the context is saved, giving you a chance to adjust the
+ store's metadata. The default implementation leaves the existing metadata
+ untouched and returns `YES`. You should only override to return `NO` if storing
+ the metadata went wrong in a critical way that stops the doc from being saved.
+ Called on an arbitrary thread, so up to you to bounce over to the correct one
+ if needed.
  */
 - (BOOL)updateMetadataForPersistentStore:(NSPersistentStore *)store error:(NSError **)error;
 
-/* Called on 10.8+ when the OS decides it wants to store a version of the existing doc *before* writing out the updated version. Default implementation simply makes a copy of the doc. You might override to speed it up by hard linking some files instead. In the event of a failure, BSManagedDocument will attempt to take care of cleanup for you.
+/**
+ Handles writing a backup copy of the document.
+ 
+ @param backupURL The URL to which to write the backup.
+ @param outError Upon return, if a problem occurs, contains an error object that describes the problem.
+ @return `YES` if the write operation is successful, otherwise `NO`.
+ 
+ Called on 10.8+ when the OS decides it wants to store a version of the existing
+ doc *before* writing out the updated version. The default implementation simply
+ makes a copy of the document. You might override to speed it up by hard linking
+ some files instead.
+ 
+ In the event of a failure, `BSManagedDocument` will attempt
+ to take care of cleanup for you.
  */
 - (BOOL)writeBackupToURL:(NSURL *)backupURL error:(NSError **)outError;
 
