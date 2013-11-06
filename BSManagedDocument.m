@@ -143,24 +143,6 @@
                                      storeOptions:(NSDictionary *)storeOptions
                                             error:(NSError **)error
 {
-	// On 10.8+, the coordinator whinges but doesn't fail if you leave out this key and the file turns out to be read-only. Supplying a value makes it fail with a (not very helpful) error when the store is read-only
-    if (![storeOptions objectForKey:NSReadOnlyPersistentStoreOption])
-    {
-        NSMutableDictionary *mutableOptions = [NSMutableDictionary dictionaryWithDictionary:storeOptions];
-        [mutableOptions setObject:@NO forKey:NSReadOnlyPersistentStoreOption];
-        storeOptions = mutableOptions;
-    }
-    
-    // For apps linked against 10.9+ and supporting 10.6 still, use the old
-    // style journal. Since the journal lives alongside the persistent store
-    // I figure there's a chance it could copied from a new Mac to an old one
-    // https://developer.apple.com/library/mac/releasenotes/DataManagement/WhatsNew_CoreData_OSX/index.html
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_9 && MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_6
-    NSMutableDictionary *mutableOptions = [NSMutableDictionary dictionaryWithDictionary:storeOptions];
-    [mutableOptions setObject:@{ @"journal_mode" : @"DELETE" } forKey:NSSQLitePragmasOption];
-    storeOptions = mutableOptions;
-#endif
-    
 	NSPersistentStoreCoordinator *storeCoordinator = [[self managedObjectContext] persistentStoreCoordinator];
 	
     _store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
@@ -173,6 +155,32 @@
 #endif
     
 	return (_store != nil);
+}
+
+- (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL
+                                           ofType:(NSString *)fileType
+                                            error:(NSError **)error
+{
+    // On 10.8+, the coordinator whinges but doesn't fail if you leave out NSReadOnlyPersistentStoreOption and the file turns out to be read-only. Supplying a value makes it fail with a (not very helpful) error when the store is read-only
+    BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
+    
+    NSDictionary *options = @{
+                              // For apps linked against 10.9+ and supporting 10.6 still, use the old
+                              // style journal. Since the journal lives alongside the persistent store
+                              // I figure there's a chance it could be copied from a new Mac to an old one
+                              // https://developer.apple.com/library/mac/releasenotes/DataManagement/WhatsNew_CoreData_OSX/index.html
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_9 && MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_6
+                              NSSQLitePragmasOption : @{ @"journal_mode" : @"DELETE" },
+#endif
+                              
+                              NSReadOnlyPersistentStoreOption : @(readonly)
+                              };
+
+    return [self configurePersistentStoreCoordinatorForURL:storeURL
+                                                    ofType:fileType
+                                        modelConfiguration:nil
+                                              storeOptions:options
+                                                     error:error];
 }
 
 - (NSString *)persistentStoreTypeForFileType:(NSString *)fileType { return NSSQLiteStoreType; }
@@ -286,12 +294,8 @@
         return NO;
     }
     
-    BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
-    
     BOOL result = [self configurePersistentStoreCoordinatorForURL:storeURL
                                                            ofType:typeName
-                                               modelConfiguration:nil
-                                                     storeOptions:@{NSReadOnlyPersistentStoreOption : @(readonly)}
                                                             error:outError];
     
     if (result)
@@ -340,8 +344,6 @@
             
             result = [self configurePersistentStoreCoordinatorForURL:storeURL
                                                               ofType:typeName
-                                                  modelConfiguration:nil
-                                                        storeOptions:nil
                                                                error:error];
             if (!result) return NO;
         }
