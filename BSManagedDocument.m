@@ -151,6 +151,16 @@
         storeOptions = mutableOptions;
     }
     
+    // For apps linked against 10.9+ and supporting 10.6 still, use the old
+    // style journal. Since the journal lives alongside the persistent store
+    // I figure there's a chance it could copied from a new Mac to an old one
+    // https://developer.apple.com/library/mac/releasenotes/DataManagement/WhatsNew_CoreData_OSX/index.html
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_9 && MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_6
+    NSMutableDictionary *mutableOptions = [NSMutableDictionary dictionaryWithDictionary:storeOptions];
+    [mutableOptions setObject:@{ @"journal_mode" : @"DELETE" } forKey:NSSQLitePragmasOption];
+    storeOptions = mutableOptions;
+#endif
+    
 	NSPersistentStoreCoordinator *storeCoordinator = [[self managedObjectContext] persistentStoreCoordinator];
 	
     _store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
