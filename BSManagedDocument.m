@@ -321,7 +321,7 @@
     NSManagedObjectContext *context = self.managedObjectContext;
     if ([context respondsToSelector:@selector(parentContext)])
     {
-        if (![context save:outError]) additionalContent = nil;
+        if (![context save:outError]) return nil;
     }
     
     
