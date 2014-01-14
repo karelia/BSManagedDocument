@@ -313,8 +313,13 @@
     NSAssert([NSThread isMainThread], @"Somehow -%@ has been called off of the main thread (operation %u to: %@)", NSStringFromSelector(_cmd), (unsigned)saveOperation, [url path]);
     
     // Grab additional content that a subclass might provide
+    if (outError) *outError = nil;  // unusually for me, be forgiving of subclasses which forget to fill in the error
     id additionalContent = [self additionalContentForURL:url saveOperation:saveOperation error:outError];
-    if (!additionalContent) return nil;
+    if (!additionalContent)
+    {
+        if (outError) NSAssert(*outError != nil, @"-additionalContentForURL:saveOperation:error: failed with a nil error");
+        return nil;
+    }
     
     
     // On 10.7+, save the main context, ready for parent to be saved in a moment
@@ -565,13 +570,11 @@
         
         
         // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
-        NSError *error = nil;   // unusually for me, be forgiving of subclasses which forget to fill in the error
+        NSError *error;
         _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
         
         if (!_contents)
         {
-            NSAssert(error, @"-additionalContentForURL:ofType:forSaveOperation:error: failed with a nil error");
-            
             // The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
             fileAccessCompletionHandler();
             if (completionHandler) completionHandler(error);
