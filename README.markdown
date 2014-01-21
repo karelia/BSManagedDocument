@@ -25,3 +25,7 @@
 Standard BSD licence.
 
 Please see the header file for the full text.
+
+## Usage
+
+Add `BSManagedDocument` `.m` and `.h` to your Xcode project and carry on your merry way. Or if it's more your style of thing, we're on CocoaPods too. 
