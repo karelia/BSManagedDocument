@@ -86,11 +86,8 @@
     if ([context respondsToSelector:@selector(setParentContext:)])
     {
         NSManagedObjectContext *parentContext = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
-        
-        [parentContext performBlockAndWait:^{
-            [parentContext setUndoManager:nil]; // no point in it supporting undo
-            [parentContext setPersistentStoreCoordinator:coordinator];
-        }];
+        parentContext.undoManager = nil; // no point in it supporting undo
+        parentContext.persistentStoreCoordinator = coordinator;
         
         [context setParentContext:parentContext];
 
