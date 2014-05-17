@@ -574,7 +574,12 @@
         {
             // The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
             fileAccessCompletionHandler();
-            if (completionHandler) completionHandler(error);
+            if (completionHandler)
+            {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completionHandler(error);
+                });
+            }
             return;
         }
         
@@ -625,7 +630,12 @@
 			
 			// And can finally declare we're done
             fileAccessCompletionHandler();
-            if (completionHandler) completionHandler(error);
+            if (completionHandler)
+            {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completionHandler(error);
+                });
+            }
         };
         
         // Kick off async saving work
