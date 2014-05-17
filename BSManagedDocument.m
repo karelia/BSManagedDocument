@@ -582,9 +582,7 @@
         [_contents retain];
 #endif
         
-        
-        // Kick off async saving work
-        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
+        void(^saveCompletionHandler)(NSError*) =^(NSError *error) {
             
             // If the save failed, it might be an error the user can recover from.
 			// e.g. the dreaded "file modified by another application"
@@ -628,7 +626,48 @@
 			// And can finally declare we're done
             fileAccessCompletionHandler();
             if (completionHandler) completionHandler(error);
-        }];
+        };
+        
+        // Kick off async saving work
+        if (saveOperation == NSAutosaveInPlaceOperation)
+        {
+            // NSDocument's implementation for AutosaveInPlace seems to be broken and freezes on NSFileCoordinator.
+            // at [NSDocument _fileCoordinator:coordinateReadingContentsAndWritingItemAtURL:byAccessor:] to be precise
+            // thus we do our own just for this.
+            void(^autosaveInPlaceImplementation)() = ^{
+                NSError* fileWriteError = nil;
+                if ([self writeSafelyToURL:url ofType:typeName forSaveOperation:saveOperation error:&fileWriteError])
+                {
+                    NSDate* fileDate = nil;
+                    [url getResourceValue:&fileDate forKey:NSURLAttributeModificationDateKey error:nil];
+                    if (!fileDate) {
+                        fileDate = [NSDate date];
+                    }
+                    [self setFileModificationDate:fileDate];
+                    [self setFileType:typeName];
+                    [self setFileURL:url];
+                    [self setAutosavedContentsFileURL:url];
+                    [self updateChangeCount:NSChangeAutosaved];
+                    saveCompletionHandler(nil);
+                }
+                else
+                {
+                    saveCompletionHandler(fileWriteError);
+                }
+            };
+            if ([self canAsynchronouslyWriteToURL:url ofType:typeName forSaveOperation:saveOperation])
+            {
+                [[self presentedItemOperationQueue] addOperationWithBlock:autosaveInPlaceImplementation];
+            }
+            else
+            {
+                autosaveInPlaceImplementation();
+            }
+        }
+        else
+        {
+            [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:saveCompletionHandler];
+        }
     }];
 }
 
