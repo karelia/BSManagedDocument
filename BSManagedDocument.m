@@ -648,16 +648,17 @@
                 NSError* fileWriteError = nil;
                 if ([self writeSafelyToURL:url ofType:typeName forSaveOperation:saveOperation error:&fileWriteError])
                 {
+                    [self setFileType:typeName];
+                    [self setFileURL:url];
+                    [self setAutosavedContentsFileURL:url];
+                    [self updateChangeCount:NSChangeAutosaved];
+
                     NSDate* fileDate = nil;
                     [url getResourceValue:&fileDate forKey:NSURLAttributeModificationDateKey error:nil];
                     if (!fileDate) {
                         fileDate = [NSDate date];
                     }
                     [self setFileModificationDate:fileDate];
-                    [self setFileType:typeName];
-                    [self setFileURL:url];
-                    [self setAutosavedContentsFileURL:url];
-                    [self updateChangeCount:NSChangeAutosaved];
                     saveCompletionHandler(nil);
                 }
                 else
