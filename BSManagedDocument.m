@@ -650,7 +650,7 @@
                 {
                     [self setFileType:typeName];
                     [self setFileURL:url];
-                    [self setAutosavedContentsFileURL:url];
+                    [self setAutosavedContentsFileURL:nil];
                     [self updateChangeCount:NSChangeAutosaved];
 
                     NSDate* fileDate = nil;
