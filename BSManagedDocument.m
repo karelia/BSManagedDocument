@@ -564,29 +564,43 @@ static NSString* BSStringFromSaveOperationType(NSSaveOperationType type);
     //  * If autosaving while quitting, calling -performActivity… here results in deadlock
     [self performAsynchronousFileAccessUsingBlock:^(void (^fileAccessCompletionHandler)(void)) {
         
-        NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+        // guard _contents from modification
+        NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
+        BOOL __block hasContents = NO;
+        NSError* __block returnError = nil;
+        [parentContext performBlockAndWait:^{
+            NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+            // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
+            NSError *error = nil;
+            _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
+            if (error) {
+                returnError = error;
+            }
+#if !__has_feature(objc_arc)
+            [_contents retain];
+#endif
+            hasContents = _contents != nil;
+        }];
         
-        
-        // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
-        NSError *error;
-        _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
-        
-        if (!_contents)
+        if (!hasContents)
         {
             // The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
             fileAccessCompletionHandler();
             if (completionHandler)
             {
+#if !__has_feature(objc_arc)
+                returnError = [returnError retain];
+#endif
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    completionHandler(error);
+#if !__has_feature(objc_arc)
+                    [returnError autorelease];
+#endif
+                    completionHandler(returnError);
                 });
             }
             return;
         }
         
-#if !__has_feature(objc_arc)
-        [_contents retain];
-#endif
         
         void(^saveCompletionHandler)(NSError*) =^(NSError *error) {
             
@@ -603,21 +617,24 @@ static NSString* BSStringFromSaveOperationType(NSSaveOperationType type);
 			if ([error recoveryAttempter])
             {
                 [self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
-                    
+                    [parentContext performBlockAndWait:^{
 #if !__has_feature(objc_arc)
-                    [_contents release];
+                        [_contents release];
 #endif
-                    _contents = nil;
+                        _contents = nil;
+                    }];
                     
                     activityCompletionHandler();
                 }];
             }
             else
             {
+                [parentContext performBlockAndWait:^{
 #if !__has_feature(objc_arc)
-                [_contents release];
+                    [_contents release];
 #endif
-                _contents = nil;
+                    _contents = nil;
+                }];
             }
 			
 			
@@ -647,27 +664,30 @@ static NSString* BSStringFromSaveOperationType(NSSaveOperationType type);
             // NSDocument's implementation for AutosaveInPlace seems to be broken and freezes on NSFileCoordinator.
             // at [NSDocument _fileCoordinator:coordinateReadingContentsAndWritingItemAtURL:byAccessor:] to be precise
             // thus we do our own just for this.
+            NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
             void(^autosaveInPlaceImplementation)() = ^{
-                NSError* fileWriteError = nil;
-                if ([self writeSafelyToURL:url ofType:typeName forSaveOperation:saveOperation error:&fileWriteError])
-                {
-                    [self setFileType:typeName];
-                    [self setFileURL:url];
-                    [self setAutosavedContentsFileURL:nil];
-                    [self updateChangeCount:NSChangeAutosaved];
-
-                    NSDate* fileDate = nil;
-                    [url getResourceValue:&fileDate forKey:NSURLAttributeModificationDateKey error:nil];
-                    if (!fileDate) {
-                        fileDate = [NSDate date];
+                [parentContext performBlockAndWait:^{
+                    NSError* fileWriteError = nil;
+                    if ([self writeSafelyToURL:url ofType:typeName forSaveOperation:saveOperation error:&fileWriteError])
+                    {
+                        [self setFileType:typeName];
+                        [self setFileURL:url];
+                        [self setAutosavedContentsFileURL:nil];
+                        [self updateChangeCount:NSChangeAutosaved];
+                        
+                        NSDate* fileDate = nil;
+                        [url getResourceValue:&fileDate forKey:NSURLAttributeModificationDateKey error:nil];
+                        if (!fileDate) {
+                            fileDate = [NSDate date];
+                        }
+                        [self setFileModificationDate:fileDate];
+                        saveCompletionHandler(nil);
                     }
-                    [self setFileModificationDate:fileDate];
-                    saveCompletionHandler(nil);
-                }
-                else
-                {
-                    saveCompletionHandler(fileWriteError);
-                }
+                    else
+                    {
+                        saveCompletionHandler(fileWriteError);
+                    }
+                }];
             };
             if ([self canAsynchronouslyWriteToURL:url ofType:typeName forSaveOperation:saveOperation])
             {
@@ -804,27 +824,37 @@ originalContentsURL:(NSURL *)originalContentsURL
     // Grab additional content before proceeding. This should *only* happen when writing entirely on the main thread
     // (e.g. Using one of the old synchronous -save… APIs. Note: duplicating a document calls -writeSafely… directly)
     // To have gotten here on any thread but the main one is a programming error and unworkable, so we throw an exception
-    if (!_contents)
-    {
-		_contents = [self contentsForURL:inURL ofType:typeName saveOperation:saveOp error:error];
-        if (!_contents) return NO;
-        
-        // Worried that _contents hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
-        
-        
-        // And now we're ready to write for real
-        BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
-        
-        
-        // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
-        _contents = nil;
-        return result;
-    }
+    BOOL __block result = NO;
+    NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
+    [parentContext performBlockAndWait:^{
+        if (!_contents)
+        {
+            _contents = [self contentsForURL:inURL ofType:typeName saveOperation:saveOp error:error];
+            if (!_contents) {
+                result = NO;
+                return;
+            }
+            
+            // Worried that _contents hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
+            
+            
+            // And now we're ready to write for real
+            result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
+            
+            
+            // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
+            _contents = nil;
+            result  = NO;
+            return;
+        }
+
+        // We implement contents as a block which is called to perform the writing
+        BOOL (^contentsBlock)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = _contents;
+        result = contentsBlock(inURL, saveOp, originalContentsURL, error);
+    }];
     
+    return result;
     
-    // We implement contents as a block which is called to perform the writing
-    BOOL (^contentsBlock)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = _contents;
-    return contentsBlock(inURL, saveOp, originalContentsURL, error);
 }
 
 - (void)setBundleBitForDirectoryAtURL:(NSURL *)url;
@@ -1063,10 +1093,13 @@ originalContentsURL:(NSURL *)originalContentsURL
     BOOL (^contentsBlock)(NSURL*, NSSaveOperationType, NSURL*, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
         return [self writeBackupToURL:url error:error];
     };
-    
-    _contents = contentsBlock;
-    NSDocument *result = [super duplicateAndReturnError:outError];
-    _contents = nil;
+    NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
+    NSDocument __block* result = nil;
+    [parentContext performBlockAndWait:^{
+        _contents = contentsBlock;
+        result = [super duplicateAndReturnError:outError];
+        _contents = nil;
+    }];
     
     return result;
 }
