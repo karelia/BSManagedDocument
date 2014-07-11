@@ -20,6 +20,7 @@
 
 #import "BSManagedDocument.h"
 
+static NSString* BSStringFromSaveOperationType(NSSaveOperationType type);
 
 @interface BSManagedDocument ()
 @property(nonatomic, copy) NSURL *autosavedContentsTempDirectoryURL;
@@ -637,7 +638,9 @@
                 });
             }
         };
-        
+#ifdef DDLogDebug
+        DDLogDebug(@"Starting saving work with operation: %@",BSStringFromSaveOperationType(saveOperation));
+#endif
         // Kick off async saving work
         if (saveOperation == NSAutosaveInPlaceOperation)
         {
@@ -1155,5 +1158,30 @@ originalContentsURL:(NSURL *)originalContentsURL
 }
 
 @end
+
+
+static NSString* BSStringFromSaveOperationType(NSSaveOperationType type)
+{
+    switch (type) {
+        case NSSaveOperation:
+            return @"NSSaveOperation";
+        case NSSaveAsOperation:
+            return @"NSSaveAsOperation";
+        case NSSaveToOperation:
+            return @"NSSaveToOperation";
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+        case NSAutosaveInPlaceOperation:
+            return @"NSAutosaveInPlaceOperation";
+        case NSAutosaveElsewhereOperation:
+            return @"NSAutosaveElsewhereOperation";
+#endif
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_8
+        case NSAutosaveAsOperation:
+            return @"NSAutosaveAsOperation";
+#endif
+        default:
+            return @"";
+    }
+}
 
 
