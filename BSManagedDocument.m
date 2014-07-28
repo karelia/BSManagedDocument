@@ -1213,7 +1213,7 @@ static NSString* BSStringFromSaveOperationType(NSSaveOperationType type)
             return @"NSAutosaveAsOperation";
 #endif
         default:
-            return @"";
+            return [NSString stringWithFormat:@"UnknownSaveOperationType:%d",(int)type];
     }
 }
 
