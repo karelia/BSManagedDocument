@@ -700,6 +700,26 @@ static NSString* BSStringFromSaveOperationType(NSSaveOperationType type);
         }
         else
         {
+            if (saveOperation == NSAutosaveElsewhereOperation) {
+                NSURL* originalAutosavedContentsFileURL = self.autosavedContentsFileURL;
+                NSURL* autosavedContentsFileURL = originalAutosavedContentsFileURL;
+                int counter = 0;
+                // Make sure that we have a non-pre-existing file as the autosave contents.
+                while ([autosavedContentsFileURL checkResourceIsReachableAndReturnError:nil]) {
+                    counter++;
+                    NSString* path = [[autosavedContentsFileURL path] stringByStandardizingPath];
+                    NSString* file = [path lastPathComponent];
+                    NSString* dir = [path stringByDeletingLastPathComponent];
+                    NSString* baseName = [file stringByDeletingPathExtension];
+                    NSString* extension = [file pathExtension];
+                    NSString* updatedName = [NSString stringWithFormat:@"%@ %d.%@",baseName,counter,extension];
+                    autosavedContentsFileURL = [NSURL fileURLWithPath:[dir stringByAppendingPathComponent:updatedName]];
+                }
+                [self setAutosavedContentsFileURL:autosavedContentsFileURL];
+#ifdef DDLogDebug
+                DDLogDebug(@"Autosave elsewhere. autosavedContentsFileURL: %@ originalAutosavedContentsFileURL: %@",autosavedContentsFileURL,originalAutosavedContentsFileURL);
+#endif
+            }
             [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:saveCompletionHandler];
         }
     }];
