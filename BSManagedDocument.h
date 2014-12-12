@@ -59,6 +59,8 @@
     id  _contents;
     
     NSURL   *_autosavedContentsTempDirectoryURL;
+    
+    BOOL    _closing;
 }
 
 /**

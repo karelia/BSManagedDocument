@@ -20,6 +20,8 @@
 
 #import "BSManagedDocument.h"
 
+#import <objc/message.h>
+
 
 @interface BSManagedDocument ()
 @property(nonatomic, copy) NSURL *autosavedContentsTempDirectoryURL;
@@ -983,8 +985,36 @@ originalContentsURL:(NSURL *)originalContentsURL
     @finally
     {
         [self makeWindowControllers];
-        [self showWindows];
+        
+        // Don't show the new windows if in the middle of reverting due to the user closing document
+        // and choosing to revert changes. The new window bouncing on screen looks wrong, and then
+        // stops the document closing properly (or at least appearing to have closed).
+        if (!_closing) [self showWindows];
     }
+}
+
+- (void)canCloseDocumentWithDelegate:(id)delegate shouldCloseSelector:(SEL)shouldCloseSelector contextInfo:(void *)contextInfo {
+    // Track if in the middle of closing
+    _closing = YES;
+    
+    void (^completionHandler)(BOOL) = ^(BOOL shouldClose) {
+        if (delegate) {
+            objc_msgSend(delegate, shouldCloseSelector, self, shouldClose, contextInfo);
+        }
+    };
+    
+    [super canCloseDocumentWithDelegate:self
+                    shouldCloseSelector:@selector(document:didDecideToClose:contextInfo:)
+                            contextInfo:Block_copy(completionHandler)];
+}
+
+- (void)document:(NSDocument *)document didDecideToClose:(BOOL)shouldClose contextInfo:(void *)contextInfo {
+    _closing = NO;
+    
+    // Pass on to original delegate
+    void (^completionHandler)(BOOL) = contextInfo;
+    completionHandler(shouldClose);
+    Block_release(completionHandler);
 }
 
 #pragma mark Duplicating Documents
