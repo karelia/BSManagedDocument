@@ -989,6 +989,11 @@ originalContentsURL:(NSURL *)originalContentsURL
         // Don't show the new windows if in the middle of reverting due to the user closing document
         // and choosing to revert changes. The new window bouncing on screen looks wrong, and then
         // stops the document closing properly (or at least appearing to have closed).
+        // In theory I could not bother recreating the window controllers either. But the document
+        // system seems to have the expectation that it can keep your document instance around in
+        // memory after the revert-and-close, ready to re-use later (e.g. the user asks to open the
+        // doc again). If that happens, the window controllers need to still exist, ready to be
+        // shown.
         if (!_closing) [self showWindows];
     }
 }
