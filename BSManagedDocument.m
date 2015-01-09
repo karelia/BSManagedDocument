@@ -1010,16 +1010,16 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     [super canCloseDocumentWithDelegate:self
                     shouldCloseSelector:@selector(document:didDecideToClose:contextInfo:)
-                            contextInfo:Block_copy(completionHandler)];
+                            contextInfo:Block_copy((__bridge void *)completionHandler)];
 }
 
 - (void)document:(NSDocument *)document didDecideToClose:(BOOL)shouldClose contextInfo:(void *)contextInfo {
     _closing = NO;
     
     // Pass on to original delegate
-    void (^completionHandler)(BOOL) = contextInfo;
+    void (^completionHandler)(BOOL) = (__bridge void (^)(BOOL))(contextInfo);
     completionHandler(shouldClose);
-    Block_release(completionHandler);
+    Block_release(contextInfo);
 }
 
 #pragma mark Duplicating Documents
