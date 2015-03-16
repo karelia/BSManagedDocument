@@ -140,17 +140,33 @@
                                      storeOptions:(NSDictionary *)storeOptions
                                             error:(NSError **)error
 {
-	NSPersistentStoreCoordinator *storeCoordinator = [[self managedObjectContext] persistentStoreCoordinator];
-	
-    _store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
-                                            configuration:configuration
-                                                      URL:storeURL
-                                                  options:storeOptions
-                                                    error:error];
+	NSManagedObjectContext *managedObjectContext = [self managedObjectContext];
+
+	if ([managedObjectContext respondsToSelector:@selector(parentContext)]) {
+		[managedObjectContext performBlockAndWait:^{
+			NSPersistentStoreCoordinator *storeCoordinator = [managedObjectContext persistentStoreCoordinator];
+
+			_store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
+													configuration:configuration
+															  URL:storeURL
+														  options:storeOptions
+															error:error];
+		}];
+	}
+	else {
+		NSPersistentStoreCoordinator *storeCoordinator = [managedObjectContext persistentStoreCoordinator];
+
+		_store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
+												configuration:configuration
+														  URL:storeURL
+													  options:storeOptions
+														error:error];
+	}
+
 #if ! __has_feature(objc_arc)
-    [_store retain];
+	[_store retain];
 #endif
-    
+
 	return (_store != nil);
 }
 
