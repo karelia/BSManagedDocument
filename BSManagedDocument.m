@@ -145,7 +145,7 @@
     // on the assumption it's posted on the main thread. That could do some very weird things, so
     // let's make sure the notification is actually posted on the main thread.
     // Also seems to fix the deadlock in https://github.com/karelia/BSManagedDocument/issues/36
-	if ([context respondsToSelector:@selector(parentContext)]) {
+    if ([context respondsToSelector:@selector(performBlockAndWait:)]) {
 		[context performBlockAndWait:^{
 			NSPersistentStoreCoordinator *storeCoordinator = context.persistentStoreCoordinator;
 
