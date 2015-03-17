@@ -132,8 +132,6 @@
     return _managedObjectModel;
 }
 
-/*  Called whenever a document is opened *and* when a new document is first saved.
- */
 - (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL
                                            ofType:(NSString *)fileType
                                modelConfiguration:(NSString *)configuration

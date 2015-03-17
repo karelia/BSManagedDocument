@@ -106,7 +106,8 @@
 @property (nonatomic, strong, readonly) NSManagedObjectModel* managedObjectModel;
 
 /**
- Creates or loads the document’s persistent store.
+ Creates or loads the document’s persistent store. Called whenever a document is opened *and* when a
+ new document is first saved.
  
  @param storeURL The URL for the persistent store.
  @param fileType The document’s file type.
