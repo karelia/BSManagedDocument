@@ -138,16 +138,16 @@
                                      storeOptions:(NSDictionary *)storeOptions
                                             error:(NSError **)error
 {
-	NSManagedObjectContext *managedObjectContext = [self managedObjectContext];
+	NSManagedObjectContext *context = self.managedObjectContext;
 
     // Adding a persistent store will post a notification. If your app already has an
     // NSObjectController (or subclass) setup to the context, it will react to that notification,
     // on the assumption it's posted on the main thread. That could do some very weird things, so
     // let's make sure the notification is actually posted on the main thread.
     // Also seems to fix the deadlock in https://github.com/karelia/BSManagedDocument/issues/36
-	if ([managedObjectContext respondsToSelector:@selector(parentContext)]) {
-		[managedObjectContext performBlockAndWait:^{
-			NSPersistentStoreCoordinator *storeCoordinator = [managedObjectContext persistentStoreCoordinator];
+	if ([context respondsToSelector:@selector(parentContext)]) {
+		[context performBlockAndWait:^{
+			NSPersistentStoreCoordinator *storeCoordinator = context.persistentStoreCoordinator;
 
 			_store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
 													configuration:configuration
@@ -157,7 +157,7 @@
 		}];
 	}
 	else {
-		NSPersistentStoreCoordinator *storeCoordinator = [managedObjectContext persistentStoreCoordinator];
+		NSPersistentStoreCoordinator *storeCoordinator = context.persistentStoreCoordinator;
 
 		_store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
 												configuration:configuration
