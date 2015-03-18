@@ -132,25 +132,44 @@
     return _managedObjectModel;
 }
 
-/*  Called whenever a document is opened *and* when a new document is first saved.
- */
 - (BOOL)configurePersistentStoreCoordinatorForURL:(NSURL *)storeURL
                                            ofType:(NSString *)fileType
                                modelConfiguration:(NSString *)configuration
                                      storeOptions:(NSDictionary *)storeOptions
                                             error:(NSError **)error
 {
-	NSPersistentStoreCoordinator *storeCoordinator = [[self managedObjectContext] persistentStoreCoordinator];
-	
-    _store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
-                                            configuration:configuration
-                                                      URL:storeURL
-                                                  options:storeOptions
-                                                    error:error];
+	NSManagedObjectContext *context = self.managedObjectContext;
+
+    // Adding a persistent store will post a notification. If your app already has an
+    // NSObjectController (or subclass) setup to the context, it will react to that notification,
+    // on the assumption it's posted on the main thread. That could do some very weird things, so
+    // let's make sure the notification is actually posted on the main thread.
+    // Also seems to fix the deadlock in https://github.com/karelia/BSManagedDocument/issues/36
+    if ([context respondsToSelector:@selector(performBlockAndWait:)]) {
+		[context performBlockAndWait:^{
+			NSPersistentStoreCoordinator *storeCoordinator = context.persistentStoreCoordinator;
+
+			_store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
+													configuration:configuration
+															  URL:storeURL
+														  options:storeOptions
+															error:error];
+		}];
+	}
+	else {
+		NSPersistentStoreCoordinator *storeCoordinator = context.persistentStoreCoordinator;
+
+		_store = [storeCoordinator addPersistentStoreWithType:[self persistentStoreTypeForFileType:fileType]
+												configuration:configuration
+														  URL:storeURL
+													  options:storeOptions
+														error:error];
+	}
+
 #if ! __has_feature(objc_arc)
-    [_store retain];
+	[_store retain];
 #endif
-    
+
 	return (_store != nil);
 }
 
