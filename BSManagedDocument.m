@@ -652,8 +652,12 @@
 		forSaveOperation:(NSSaveOperationType)saveOperation
 				   error:(NSError **)outError
 {
-	if ([typeName isEqualToString:[self fileType]]) // custom doc types probably want standard saving
-    {
+    // It's possible subclassers support more file types than the Core Data package-based one
+    // BSManagedDocument supplies. e.g. an alternative format for exporting, say. If so, they don't
+    // want our custom logic kicking in when writing it, so test for that as best we can.
+    // https://github.com/karelia/BSManagedDocument/issues/36#issuecomment-91773320
+	if ([NSWorkspace.sharedWorkspace type:self.fileType conformsToType:typeName]) {
+        
 		// At this point, we've either captured all document content, or are writing on the main thread, so it's fine to unblock the UI
 		if ([self respondsToSelector:@selector(unblockUserInteraction)]) [self unblockUserInteraction];
 		
