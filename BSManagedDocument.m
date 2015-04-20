@@ -20,6 +20,7 @@
 
 #import "BSManagedDocument.h"
 
+static NSString* BSStringFromSaveOperationType(NSSaveOperationType type);
 
 @interface BSManagedDocument ()
 @property(nonatomic, copy) NSURL *autosavedContentsTempDirectoryURL;
@@ -582,28 +583,45 @@
     //  * If autosaving while quitting, calling -performActivity… here results in deadlock
     [self performAsynchronousFileAccessUsingBlock:^(void (^fileAccessCompletionHandler)(void)) {
         
-        NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+        // guard _contents from modification
+        NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
+        BOOL __block hasContents = NO;
+        NSError* __block returnError = nil;
+        [parentContext performBlockAndWait:^{
+            NSAssert(_contents == nil, @"Can't begin save; another is already in progress. Perhaps you forgot to wrap the call inside of -performActivityWithSynchronousWaiting:usingBlock:");
+            // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
+            NSError *error = nil;
+            _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
+            if (error) {
+                returnError = error;
+            }
+#if !__has_feature(objc_arc)
+            [_contents retain];
+#endif
+            hasContents = _contents != nil;
+        }];
         
-        
-        // Stash contents temporarily into an ivar so -writeToURL:… can access it from the worker thread
-        NSError *error;
-        _contents = [self contentsForURL:url ofType:typeName saveOperation:saveOperation error:&error];
-        
-        if (!_contents)
+        if (!hasContents)
         {
             // The docs say "be sure to invoke super", but by my understanding it's fine not to if it's because of a failure, as the filesystem hasn't been touched yet.
             fileAccessCompletionHandler();
-            if (completionHandler) completionHandler(error);
+            if (completionHandler)
+            {
+#if !__has_feature(objc_arc)
+                returnError = [returnError retain];
+#endif
+                dispatch_async(dispatch_get_main_queue(), ^{
+#if !__has_feature(objc_arc)
+                    [returnError autorelease];
+#endif
+                    completionHandler(returnError);
+                });
+            }
             return;
         }
         
-#if !__has_feature(objc_arc)
-        [_contents retain];
-#endif
         
-        
-        // Kick off async saving work
-        [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
+        void(^saveCompletionHandler)(NSError*) =^(NSError *error) {
             
             // If the save failed, it might be an error the user can recover from.
 			// e.g. the dreaded "file modified by another application"
@@ -618,21 +636,24 @@
 			if ([error recoveryAttempter])
             {
                 [self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
-                    
+                    [parentContext performBlockAndWait:^{
 #if !__has_feature(objc_arc)
-                    [_contents release];
+                        [_contents release];
 #endif
-                    _contents = nil;
+                        _contents = nil;
+                    }];
                     
                     activityCompletionHandler();
                 }];
             }
             else
             {
+                [parentContext performBlockAndWait:^{
 #if !__has_feature(objc_arc)
-                [_contents release];
+                    [_contents release];
 #endif
-                _contents = nil;
+                    _contents = nil;
+                }];
             }
 			
 			
@@ -646,8 +667,80 @@
 			
 			// And can finally declare we're done
             fileAccessCompletionHandler();
-            if (completionHandler) completionHandler(error);
-        }];
+            if (completionHandler)
+            {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completionHandler(error);
+                });
+            }
+        };
+#ifdef DDLogDebug
+        DDLogDebug(@"Starting saving work with operation: %@",BSStringFromSaveOperationType(saveOperation));
+#endif
+        // Kick off async saving work
+        if (saveOperation == NSAutosaveInPlaceOperation)
+        {
+            // NSDocument's implementation for AutosaveInPlace seems to be broken and freezes on NSFileCoordinator.
+            // at [NSDocument _fileCoordinator:coordinateReadingContentsAndWritingItemAtURL:byAccessor:] to be precise
+            // thus we do our own just for this.
+            NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
+            void(^autosaveInPlaceImplementation)() = ^{
+                [parentContext performBlockAndWait:^{
+                    NSError* fileWriteError = nil;
+                    if ([self writeSafelyToURL:url ofType:typeName forSaveOperation:saveOperation error:&fileWriteError])
+                    {
+                        [self setFileType:typeName];
+                        [self setFileURL:url];
+                        [self setAutosavedContentsFileURL:nil];
+                        [self updateChangeCount:NSChangeAutosaved];
+                        
+                        NSDate* fileDate = nil;
+                        [url getResourceValue:&fileDate forKey:NSURLAttributeModificationDateKey error:nil];
+                        if (!fileDate) {
+                            fileDate = [NSDate date];
+                        }
+                        [self setFileModificationDate:fileDate];
+                        saveCompletionHandler(nil);
+                    }
+                    else
+                    {
+                        saveCompletionHandler(fileWriteError);
+                    }
+                }];
+            };
+            if ([self canAsynchronouslyWriteToURL:url ofType:typeName forSaveOperation:saveOperation])
+            {
+                [[self presentedItemOperationQueue] addOperationWithBlock:autosaveInPlaceImplementation];
+            }
+            else
+            {
+                autosaveInPlaceImplementation();
+            }
+        }
+        else
+        {
+            if (saveOperation == NSAutosaveElsewhereOperation) {
+                NSURL* originalAutosavedContentsFileURL = self.autosavedContentsFileURL;
+                NSURL* autosavedContentsFileURL = originalAutosavedContentsFileURL;
+                int counter = 0;
+                // Make sure that we have a non-pre-existing file as the autosave contents.
+                while ([autosavedContentsFileURL checkResourceIsReachableAndReturnError:nil]) {
+                    counter++;
+                    NSString* path = [[autosavedContentsFileURL path] stringByStandardizingPath];
+                    NSString* file = [path lastPathComponent];
+                    NSString* dir = [path stringByDeletingLastPathComponent];
+                    NSString* baseName = [file stringByDeletingPathExtension];
+                    NSString* extension = [file pathExtension];
+                    NSString* updatedName = [NSString stringWithFormat:@"%@ %d.%@",baseName,counter,extension];
+                    autosavedContentsFileURL = [NSURL fileURLWithPath:[dir stringByAppendingPathComponent:updatedName]];
+                }
+                [self setAutosavedContentsFileURL:autosavedContentsFileURL];
+#ifdef DDLogDebug
+                DDLogDebug(@"Autosave elsewhere. autosavedContentsFileURL: %@ originalAutosavedContentsFileURL: %@",autosavedContentsFileURL,originalAutosavedContentsFileURL);
+#endif
+            }
+            [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:saveCompletionHandler];
+        }
     }];
 }
 
@@ -774,27 +867,37 @@ originalContentsURL:(NSURL *)originalContentsURL
     // Grab additional content before proceeding. This should *only* happen when writing entirely on the main thread
     // (e.g. Using one of the old synchronous -save… APIs. Note: duplicating a document calls -writeSafely… directly)
     // To have gotten here on any thread but the main one is a programming error and unworkable, so we throw an exception
-    if (!_contents)
-    {
-		_contents = [self contentsForURL:inURL ofType:typeName saveOperation:saveOp error:error];
-        if (!_contents) return NO;
-        
-        // Worried that _contents hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
-        
-        
-        // And now we're ready to write for real
-        BOOL result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
-        
-        
-        // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
-        _contents = nil;
-        return result;
-    }
+    BOOL __block result = NO;
+    NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
+    [parentContext performBlockAndWait:^{
+        if (!_contents)
+        {
+            _contents = [self contentsForURL:inURL ofType:typeName saveOperation:saveOp error:error];
+            if (!_contents) {
+                result = NO;
+                return;
+            }
+            
+            // Worried that _contents hasn't been retained? Never fear, we'll set it straight back to nil before exiting this method, I promise
+            
+            
+            // And now we're ready to write for real
+            result = [self writeToURL:inURL ofType:typeName forSaveOperation:saveOp originalContentsURL:originalContentsURL error:error];
+            
+            
+            // Finish up. Don't worry, _additionalContent was never retained on this codepath, so doesn't need to be released
+            _contents = nil;
+            result  = NO;
+            return;
+        }
+
+        // We implement contents as a block which is called to perform the writing
+        BOOL (^contentsBlock)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = _contents;
+        result = contentsBlock(inURL, saveOp, originalContentsURL, error);
+    }];
     
+    return result;
     
-    // We implement contents as a block which is called to perform the writing
-    BOOL (^contentsBlock)(NSURL *, NSSaveOperationType, NSURL *, NSError**) = _contents;
-    return contentsBlock(inURL, saveOp, originalContentsURL, error);
 }
 
 - (void)setBundleBitForDirectoryAtURL:(NSURL *)url;
@@ -1033,10 +1136,13 @@ originalContentsURL:(NSURL *)originalContentsURL
     BOOL (^contentsBlock)(NSURL*, NSSaveOperationType, NSURL*, NSError**) = ^(NSURL *url, NSSaveOperationType saveOperation, NSURL *originalContentsURL, NSError **error) {
         return [self writeBackupToURL:url error:error];
     };
-    
-    _contents = contentsBlock;
-    NSDocument *result = [super duplicateAndReturnError:outError];
-    _contents = nil;
+    NSManagedObjectContext* parentContext = [self.managedObjectContext parentContext];
+    NSDocument __block* result = nil;
+    [parentContext performBlockAndWait:^{
+        _contents = contentsBlock;
+        result = [super duplicateAndReturnError:outError];
+        _contents = nil;
+    }];
     
     return result;
 }
@@ -1128,5 +1234,30 @@ originalContentsURL:(NSURL *)originalContentsURL
 }
 
 @end
+
+
+static NSString* BSStringFromSaveOperationType(NSSaveOperationType type)
+{
+    switch (type) {
+        case NSSaveOperation:
+            return @"NSSaveOperation";
+        case NSSaveAsOperation:
+            return @"NSSaveAsOperation";
+        case NSSaveToOperation:
+            return @"NSSaveToOperation";
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+        case NSAutosaveInPlaceOperation:
+            return @"NSAutosaveInPlaceOperation";
+        case NSAutosaveElsewhereOperation:
+            return @"NSAutosaveElsewhereOperation";
+#endif
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_8
+        case NSAutosaveAsOperation:
+            return @"NSAutosaveAsOperation";
+#endif
+        default:
+            return [NSString stringWithFormat:@"UnknownSaveOperationType:%d",(int)type];
+    }
+}
 
 
