@@ -20,6 +20,8 @@
 
 #import "BSManagedDocument.h"
 
+#import <objc/message.h>
+
 
 @interface BSManagedDocument ()
 @property(nonatomic, copy) NSURL *autosavedContentsTempDirectoryURL;
@@ -1006,8 +1008,41 @@ originalContentsURL:(NSURL *)originalContentsURL
     @finally
     {
         [self makeWindowControllers];
-        [self showWindows];
+        
+        // Don't show the new windows if in the middle of reverting due to the user closing document
+        // and choosing to revert changes. The new window bouncing on screen looks wrong, and then
+        // stops the document closing properly (or at least appearing to have closed).
+        // In theory I could not bother recreating the window controllers either. But the document
+        // system seems to have the expectation that it can keep your document instance around in
+        // memory after the revert-and-close, ready to re-use later (e.g. the user asks to open the
+        // doc again). If that happens, the window controllers need to still exist, ready to be
+        // shown.
+        if (!_closing) [self showWindows];
     }
+}
+
+- (void)canCloseDocumentWithDelegate:(id)delegate shouldCloseSelector:(SEL)shouldCloseSelector contextInfo:(void *)contextInfo {
+    // Track if in the middle of closing
+    _closing = YES;
+    
+    void (^completionHandler)(BOOL) = ^(BOOL shouldClose) {
+        if (delegate) {
+            objc_msgSend(delegate, shouldCloseSelector, self, shouldClose, contextInfo);
+        }
+    };
+    
+    [super canCloseDocumentWithDelegate:self
+                    shouldCloseSelector:@selector(document:didDecideToClose:contextInfo:)
+                            contextInfo:Block_copy((__bridge void *)completionHandler)];
+}
+
+- (void)document:(NSDocument *)document didDecideToClose:(BOOL)shouldClose contextInfo:(void *)contextInfo {
+    _closing = NO;
+    
+    // Pass on to original delegate
+    void (^completionHandler)(BOOL) = (__bridge void (^)(BOOL))(contextInfo);
+    completionHandler(shouldClose);
+    Block_release(contextInfo);
 }
 
 #pragma mark Duplicating Documents
