@@ -1004,7 +1004,9 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     void (^completionHandler)(BOOL) = ^(BOOL shouldClose) {
         if (delegate) {
-            objc_msgSend(delegate, shouldCloseSelector, self, shouldClose, contextInfo);
+            typedef void (*callback_type)(id, SEL, id, BOOL, void*);
+            callback_type callback = (callback_type)objc_msgSend;
+            callback(delegate, shouldCloseSelector, self, shouldClose, contextInfo);
         }
     };
     
