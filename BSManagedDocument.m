@@ -565,8 +565,8 @@
             NSURL *backupURL = nil;
             
 			// As of 10.8, need to make a backup of the document when saving in-place
-			// Unfortunately, it turns out 10.7 includes -backupFileURL, just that it's private. Checking AppKit number seems to be our best bet, and I have to hardcode that since 10_8 is not defined in the SDK yet. (1187 was found simply by looking at the GM)
-			if (NSAppKitVersionNumber >= 1187 &&
+			// Unfortunately, it turns out 10.7 includes -backupFileURL, just that it's private. Checking AppKit number seems to be our best bet
+			if (NSAppKitVersionNumber >= NSAppKitVersionNumber10_8 &&
 				[self respondsToSelector:@selector(backupFileURL)] &&
 				(saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation) &&
 				[[self class] preservesVersions])			// otherwise backupURL has a different meaning
