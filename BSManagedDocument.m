@@ -533,19 +533,6 @@
     }];
 }
 
-- (BOOL)saveToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError **)outError;
-{
-    BOOL result = [super saveToURL:url ofType:typeName forSaveOperation:saveOperation error:outError];
-    
-    if (result &&
-        (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation || saveOperation == NSSaveAsOperation))
-    {
-        [self deleteAutosavedContentsTempDirectory];
-    }
-    
-    return result;
-}
-
 /*	Regular Save operations can write directly to the existing document since Core Data provides atomicity for us
  */
 - (BOOL)writeSafelyToURL:(NSURL *)absoluteURL
