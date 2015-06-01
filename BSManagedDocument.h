@@ -35,7 +35,8 @@
 //
 //  *   If multiple validation errors occur during saving, the presented error is adjusted to make debugging a little easier
 //
-//  *   And of course, full support for Autosave-In-Place and Versions
+//  *   Full support for Autosave-In-Place and Versions. Both of these are turned OFF by default,
+//      the same as NSDocument. Your subclass should turn them on if desired.
 //
 //  NOTE: There is currently a MAJOR flaw in Core Data's handling of EXTERNALLY STORE DATA ATTRIBUTES if you're planning to use them in your document's model
 //  The subsystem that deals with externally stored attributes is unable to deal with the persistent store being moved/renamed. It will attempt to work with external data at the OLD store location, instead of the new, and throw an exception when it fails to do that

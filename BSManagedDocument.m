@@ -835,11 +835,6 @@ originalContentsURL:(NSURL *)originalContentsURL
 
 #pragma mark Autosave
 
-/*  Enable autosave-in-place and versions browser on 10.7+
- */
-+ (BOOL)autosavesInPlace { return [NSDocument respondsToSelector:_cmd]; }
-+ (BOOL)preservesVersions { return [self autosavesInPlace]; }
-
 - (void)setAutosavedContentsFileURL:(NSURL *)absoluteURL;
 {
     [super setAutosavedContentsFileURL:absoluteURL];
