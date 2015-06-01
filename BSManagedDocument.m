@@ -70,9 +70,6 @@
         }
         
         [self setManagedObjectContext:context];
-#if ! __has_feature(objc_arc)
-        [context release];
-#endif
     }
     
     return _managedObjectContext;
@@ -93,26 +90,13 @@
         
         [context setParentContext:parentContext];
 
-#if !__has_feature(objc_arc)
-        [parentContext release];
-#endif
     }
     else
     {
         [context setPersistentStoreCoordinator:coordinator];
     }
 
-#if __has_feature(objc_arc)
     _managedObjectContext = context;
-#else
-    [context retain];
-    [_managedObjectContext release]; _managedObjectContext = context;
-#endif
-    
-
-#if !__has_feature(objc_arc)
-    [coordinator release];  // context hangs onto it for us
-#endif
     
     [super setUndoManager:[context undoManager]]; // has to be super as we implement -setUndoManager: to be a no-op
 }
@@ -125,10 +109,6 @@
     if (!_managedObjectModel)
     {
         _managedObjectModel = [NSManagedObjectModel mergedModelFromBundles:[NSArray arrayWithObject:[NSBundle mainBundle]]];
-
-#if ! __has_feature(objc_arc)
-        [_managedObjectModel retain];
-#endif
     }
 
     return _managedObjectModel;
@@ -149,9 +129,6 @@
                                                       URL:storeURL
                                                   options:storeOptions
                                                     error:error];
-#if ! __has_feature(objc_arc)
-    [_store retain];
-#endif
     
 	return (_store != nil);
 }
@@ -212,20 +189,6 @@
     [self deleteAutosavedContentsTempDirectory];
 }
 
-// It's simpler to wrap the whole method in a conditional test rather than using a macro for each line.
-#if ! __has_feature(objc_arc)
-- (void)dealloc;
-{
-    [_managedObjectContext release];
-    [_managedObjectModel release];
-    [_store release];
-    
-    // _additionalContent is unretained so shouldn't be released here
-    
-    [super dealloc];
-}
-#endif
-
 #pragma mark Reading Document Data
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)outError
@@ -268,10 +231,6 @@
                 return NO;
             }
         }
-
-#if !__has_feature(objc_arc)
-        [_store release];
-#endif
 
         _store = nil;
     }
@@ -383,11 +342,6 @@
              error:error];
              
              if (!migrated) return NO;
-             
-             #if ! __has_feature(objc_arc)
-             [migrated retain];
-             [_store release];
-             #endif
              
              _store = migrated;
              }
@@ -510,11 +464,7 @@
         return result;
     };
     
-#if !__has_feature(objc_arc)
-    return [[contents copy] autorelease];
-#else
     return [contents copy];
-#endif
 }
 
 - (BOOL)createPackageDirectoriesAtURL:(NSURL *)url
@@ -580,10 +530,6 @@
             return;
         }
         
-#if !__has_feature(objc_arc)
-        [_contents retain];
-#endif
-        
         
         // Kick off async saving work
         [super saveToURL:url ofType:typeName forSaveOperation:saveOperation completionHandler:^(NSError *error) {
@@ -602,9 +548,6 @@
             {
                 [self performActivityWithSynchronousWaiting:NO usingBlock:^(void (^activityCompletionHandler)(void)) {
                     
-#if !__has_feature(objc_arc)
-                    [_contents release];
-#endif
                     _contents = nil;
                     
                     activityCompletionHandler();
@@ -612,9 +555,6 @@
             }
             else
             {
-#if !__has_feature(objc_arc)
-                [_contents release];
-#endif
                 _contents = nil;
             }
 			
@@ -822,18 +762,7 @@ originalContentsURL:(NSURL *)originalContentsURL
         
         [parent performBlockAndWait:^{
             result = [self preflightURL:storeURL thenSaveContext:parent error:error];
-            
-#if ! __has_feature(objc_arc)
-            // Errors need special handling to guarantee surviving crossing the block. http://www.mikeabdullah.net/cross-thread-error-passing.html
-            if (!result && error) [*error retain];
-#endif
-            
         }];
-        
-#if ! __has_feature(objc_arc)
-        if (!result && error) [*error autorelease]; // tidy up since any error was retained on worker thread
-#endif
-        
     }
     else
     {
@@ -943,9 +872,6 @@ originalContentsURL:(NSURL *)originalContentsURL
     NSURL *autosaveTempDir = self.autosavedContentsTempDirectoryURL;
     if (autosaveTempDir)
     {
-#if ! __has_feature(objc_arc)
-        [[autosaveTempDir retain] autorelease];
-#endif
         self.autosavedContentsTempDirectoryURL = nil;
         
         NSError *error;
@@ -969,9 +895,6 @@ originalContentsURL:(NSURL *)originalContentsURL
         [self removeWindowController:aController];
         [aController close];
     }
-#if ! __has_feature(objc_arc)
-    [controllers release];
-#endif
     }
 
 
@@ -1070,10 +993,6 @@ originalContentsURL:(NSURL *)originalContentsURL
     
     // Somewhat of a hack: wait for autosave to finish
     [self performSynchronousFileAccessUsingBlock:^{ }];
-    
-#if ! __has_feature(objc_arc)
-    if (!result) [*outError autorelease];   // match the -copy above
-#endif
     
     return result;
 }
