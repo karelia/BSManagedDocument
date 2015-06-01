@@ -109,7 +109,7 @@
                                             error:(NSError **)error
 {
     // On 10.8+, the coordinator whinges but doesn't fail if you leave out NSReadOnlyPersistentStoreOption and the file turns out to be read-only. Supplying a value makes it fail with a (not very helpful) error when the store is read-only
-    BOOL readonly = ([self respondsToSelector:@selector(isInViewingMode)] && [self isInViewingMode]);
+    BOOL readonly = [self isInViewingMode];
     
     NSDictionary *options = @{
                               // For apps linked against 10.9+ and supporting 10.6 still, use the old
