@@ -48,27 +48,7 @@
 {
     if (!_managedObjectContext)
     {
-        // Need 10.7+ to support concurrency types
-        __block NSManagedObjectContext *context;
-        if ([NSManagedObjectContext instancesRespondToSelector:@selector(initWithConcurrencyType:)])
-        {
-            context = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
-        }
-        else
-        {
-            // On 10.6, context MUST be created on the thread/queue that's going to use it
-            if ([NSThread isMainThread])
-            {
-                context = [[self.class.managedObjectContextClass alloc] init];
-            }
-            else
-            {
-                dispatch_sync(dispatch_get_main_queue(), ^{
-                    context = [[self.class.managedObjectContextClass alloc] init];
-                });
-            }
-        }
-        
+        NSManagedObjectContext *context = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
         [self setManagedObjectContext:context];
     }
     
@@ -81,20 +61,11 @@
 
     NSPersistentStoreCoordinator *coordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
-    // Need 10.7+ to support parent context
-    if ([context respondsToSelector:@selector(setParentContext:)])
-    {
-        NSManagedObjectContext *parentContext = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
-        parentContext.undoManager = nil; // no point in it supporting undo
-        parentContext.persistentStoreCoordinator = coordinator;
-        
-        [context setParentContext:parentContext];
-
-    }
-    else
-    {
-        [context setPersistentStoreCoordinator:coordinator];
-    }
+    NSManagedObjectContext *parentContext = [[self.class.managedObjectContextClass alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+    parentContext.undoManager = nil; // no point in it supporting undo
+    parentContext.persistentStoreCoordinator = coordinator;
+    
+    [context setParentContext:parentContext];
 
     _managedObjectContext = context;
     
@@ -210,8 +181,7 @@
         // I've found for atomic stores that -reset only rolls back to the last loaded or saved version of the store; NOT what's actually on disk
         // To force it to re-read from disk, the only solution I've found is removing and re-adding the persistent store
         NSManagedObjectContext *context = self.managedObjectContext;
-        if ([context respondsToSelector:@selector(parentContext)])
-        {
+        
             // In my testing, HAVE to do the removal using parent's private queue. Otherwise, it deadlocks, trying to acquire a _PFLock
             NSManagedObjectContext *parent = context.parentContext;
             while (parent)
@@ -223,14 +193,6 @@
             [context performBlockAndWait:^{
                 result = [context.persistentStoreCoordinator removePersistentStore:_store error:outError];
             }];
-        }
-        else
-        {
-            if (![context.persistentStoreCoordinator removePersistentStore:_store error:outError])
-            {
-                return NO;
-            }
-        }
 
         _store = nil;
     }
@@ -280,12 +242,9 @@
     }
     
     
-    // On 10.7+, save the main context, ready for parent to be saved in a moment
+    // Save the main context, ready for parent to be saved in a moment
     NSManagedObjectContext *context = self.managedObjectContext;
-    if ([context respondsToSelector:@selector(parentContext)])
-    {
-        if (![context save:outError]) return nil;
-    }
+    if (![context save:outError]) return nil;
     
     
     // What we consider to be "contents" is actually a worker block
@@ -597,7 +556,7 @@
 	if ([typeName isEqualToString:[self fileType]]) // custom doc types probably want standard saving
     {
 		// At this point, we've either captured all document content, or are writing on the main thread, so it's fine to unblock the UI
-		if ([self respondsToSelector:@selector(unblockUserInteraction)]) [self unblockUserInteraction];
+		[self unblockUserInteraction];
 		
 		
         if (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation ||
@@ -754,8 +713,6 @@ originalContentsURL:(NSURL *)originalContentsURL
     // On 10.6 saving is just one call, all on main thread. 10.7+ have to work on the context's private queue
     NSManagedObjectContext *context = [self managedObjectContext];
     
-    if ([context respondsToSelector:@selector(parentContext)])
-    {
         [self unblockUserInteraction];
         
         NSManagedObjectContext *parent = [context parentContext];
@@ -763,12 +720,6 @@ originalContentsURL:(NSURL *)originalContentsURL
         [parent performBlockAndWait:^{
             result = [self preflightURL:storeURL thenSaveContext:parent error:error];
         }];
-    }
-    else
-    {
-        result = [self preflightURL:storeURL thenSaveContext:context error:error];
-    }
-    
     
     return result;
 }
