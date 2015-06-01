@@ -804,9 +804,8 @@ originalContentsURL:(NSURL *)originalContentsURL
 
 - (BOOL)isEntireFileLoaded { return NO; }
 
-- (BOOL)canAsynchronouslyWriteToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation;
-{
-    return [NSDocument instancesRespondToSelector:_cmd];    // opt in on 10.7+
+- (BOOL)canAsynchronouslyWriteToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation {
+    return YES;
 }
 
 - (void)setFileURL:(NSURL *)absoluteURL

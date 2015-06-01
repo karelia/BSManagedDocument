@@ -21,7 +21,7 @@
 //
 //  *   Saves to a file package
 //
-//  *   On 10.7+, asynchronous saving is supported. We set up a parent/child pair of contexts; the parent saves on its own thread
+//  *   Asynchronous saving. We set up a parent/child pair of contexts; the parent saves on its own thread
 //
 //  *   Full support for concurrent document opening too
 //
@@ -262,7 +262,7 @@
  */
 - (BOOL)writeBackupToURL:(NSURL *)backupURL error:(NSError **)outError;
 
-/* BSManagedDocument supports asynchronous saving on 10.7+ (on earlier releases this method returns NO).
+/** BSManagedDocument opts into async saves by default.
  */
 - (BOOL)canAsynchronouslyWriteToURL:(NSURL *)url ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation;
 
